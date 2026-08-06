@@ -112,7 +112,7 @@ export function DayColumn({
               aria-expanded={activeHour === hour}
               className={cn(
                 "h-16 relative group cursor-pointer transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]",
-                activeHour === hour ? "bg-[var(--color-primary-light)] z-50" : "hover:bg-[var(--bg-surface-hover)]"
+                activeHour === hour ? "bg-[var(--color-primary-light)] z-[65]" : "hover:bg-[var(--bg-surface-hover)]"
               )}
               onClick={(e) => handleCellClick(hour, e)}
               onKeyDown={(e) => {
@@ -135,7 +135,7 @@ export function DayColumn({
               {activeHour === hour && (
                 <div 
                   ref={dropdownRef}
-                  className={`absolute top-10 w-[85vw] max-w-[280px] sm:w-72 sm:max-w-none bg-[var(--bg-surface)] shadow-lg border border-[var(--border-strong)] rounded-lg p-2 sm:p-2.5 z-50 max-h-[320px] overflow-y-auto ${getDropdownPositionClass()}`}
+                  className={`absolute top-10 w-[85vw] max-w-[280px] sm:w-72 sm:max-w-none bg-[var(--bg-surface)] shadow-lg border border-[var(--border-strong)] rounded-lg p-2 sm:p-2.5 z-[65] max-h-[320px] overflow-y-auto ${getDropdownPositionClass()}`}
                   onClick={(e) => e.stopPropagation()} 
                 >
                   <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 px-1">
@@ -147,7 +147,7 @@ export function DayColumn({
                   ) : (
                     <div className="space-y-1.5">
                       {available.map(act => {
-                        const isApproved = materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
+                        const isApproved = showAntecedentes && materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
                         const selectedSchedules = selectedActivities.flatMap(sa => sa.schedules);
                         const isConflict = hasConflict(act.schedules, selectedSchedules);
                         const antecedentesPendientes = getPendingPrerequisites(act.asignatura, act.antecedentes, materiasCompletadas);

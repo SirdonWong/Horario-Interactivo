@@ -11,6 +11,7 @@ interface SubjectSelectionModalProps {
   availableActivities: Activity[];
   selectedActivities: Activity[];
   materiasCompletadas: Set<string>;
+  showAntecedentes: boolean;
   onSelectActivity: (activity: Activity) => void;
   onRemoveActivity: (activityId: string) => void;
 }
@@ -21,6 +22,7 @@ export function SubjectSelectionModal({
   availableActivities,
   selectedActivities,
   materiasCompletadas,
+  showAntecedentes,
   onSelectActivity,
   onRemoveActivity,
 }: SubjectSelectionModalProps) {
@@ -113,7 +115,7 @@ export function SubjectSelectionModal({
               ) : (
                 filteredActivities.map((activity) => {
                   const isSelected = selectedIds.has(activity.id);
-                  const isCompletada = materiasCompletadas.has(resolveMateriaId(activity.asignatura) || "");
+                  const isCompletada = showAntecedentes && materiasCompletadas.has(resolveMateriaId(activity.asignatura) || "");
                   const isConflicting = !isSelected && !isCompletada && hasConflict(activity.schedules, allSelectedSchedules);
                   const scheduleText = formatWeeklySchedules(activity.schedules);
 

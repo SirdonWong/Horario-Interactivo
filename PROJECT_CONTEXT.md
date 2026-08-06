@@ -2,18 +2,19 @@
 
 ## 1. Resumen general
 
-- **Qué hace la app:** Aplicación web sobria y minimalista (basada en los principios de **Impeccable Design**) para planificar y optimizar horarios académicos universitarios. Permite cargar múltiples archivos CSV y Excel (`.xlsx`) con la oferta académica (obligatorias, optativas y libres), seleccionar asignaturas y grupos de forma interactiva en una grilla semanal deslizable con horas fijas, prevenir automáticamente traslapes/conflictos de horario, personalizar el color de cada materia (con alternancia entre estilo neutral monocromático y modo colorido), verificar y advertir sobre antecedentes/prerrequisitos pendientes (obligatorias mediante malla curricular, y optativas extrayéndolos al vuelo de su descripción en el documento) (con un interruptor global en el encabezado `TRUE`/`FALSE`), desplegar la información completa de sesiones semanales múltiples ("Martes y Jueves 12:00-14:00"), gestionar materias aprobadas mediante un **pop-up modal emergente de prerrequisitos** con buscador instantáneo, acordeón animado, selección masiva por semestre y animaciones fluidas con **Motion**, reemplazar alertas emergentes nativas por un componente modal **`<ConfirmDialog />`** animado, incorporar un seleccionador de hojas para archivos Excel, alternar entre **Dark Mode y Light Mode**, adaptar fluidamente la interfaz a teléfonos móviles mediante un **Drawer deslizable** y **Dropdowns Inteligentes** (con auto-centrado de vista, control elástico proporcional del `z-index` y anchos variables `vw`), detectar automáticamente las columnas del archivo subido y mostrar un diálogo de mapeo manual cuando no se reconocen (con caché por fingerprint de encabezados en `localStorage`), guardar el estado en `localStorage` con control de versión de esquema (`v1`), y exportar el horario final como imagen PNG con indicador visual de carga.
+- **Qué hace la app:** Aplicación web sobria y minimalista (basada en los principios de **Impeccable Design**) para planificar y optimizar horarios académicos universitarios. Permite cargar múltiples archivos CSV y Excel (`.xlsx`) con la oferta académica (obligatorias, optativas y libres), seleccionar asignaturas y grupos de forma interactiva en una grilla semanal deslizable con horas fijas, prevenir automáticamente traslapes/conflictos de horario, personalizar el color de cada materia con estilo **Neón / Translúcido Glassmorphic** en modo oscuro, verificar y advertir sobre antecedentes/prerrequisitos pendientes (obligatorias mediante malla curricular, y optativas extrayéndolos al vuelo de su descripción en el documento) con un interruptor global en el encabezado `TRUE`/`FALSE` que controla estrictamente el bloqueo y las etiquetas "Ya aprobada", desplegar la información completa de sesiones semanales múltiples ("Martes y Jueves 12:00-14:00"), gestionar materias aprobadas mediante un **pop-up modal emergente de prerrequisitos** con buscador instantáneo, acordeón animado, selección masiva por semestre y animaciones fluidas con **Motion**, reemplazar alertas emergentes nativas por un componente modal **`<ConfirmDialog />`** animado, incorporar un seleccionador de hojas para archivos Excel con resaltado interactivo de filas y checkboxes acentuados (`accent`), alternar entre **Dark Mode y Light Mode**, adaptar fluidamente la interfaz a teléfonos móviles mediante un **Drawer deslizable** y **Dropdowns Inteligentes** con anchos proporcionales e interactivos en **Radix UI**, detectar automáticamente las columnas del archivo subido y mostrar un diálogo de mapeo manual accesible cuando no se reconocen (con caché por fingerprint de encabezados en `localStorage`), guardar el estado en `localStorage` con control de versión de esquema (`v1`), y exportar el horario final como imagen PNG con indicador visual de carga.
 - **Stack tecnológico:**
   - **Framework / UI:** React 19 (`react@^19.0.1`, `react-dom@^19.0.1`)
   - **Lenguaje:** TypeScript 5.8 (`typescript@~5.8.2`)
   - **Bundler / Build Tool:** Vite 6 (`vite@^6.2.3`)
-  - **Estilos:** Tailwind CSS v4 (`@tailwindcss/vite@^4.1.14`, `tailwindcss@^4.1.14`) con sistema de tokens CSS `:root` y `.dark` para diseño Impeccable (Light / Dark mode).
-  - **Animaciones UI / Motion:** `motion` (`motion/react@^12.23.24`) para entradas/salidas de modales, colapsos de acordeón, barras de progreso, cuadros de confirmación y feedback táctil (*tap scale*).
+  - **Estilos:** Tailwind CSS v4 (`@tailwindcss/vite@^4.1.14`, `tailwindcss@^4.1.14`) con sistema de tokens CSS `:root` y `.dark` (estilo Neón translúcido para swatches en modo oscuro).
+  - **Primitivas UI Accesibles:** `@radix-ui/react-select@^2.3.7` para menús desplegables del modal de mapeo de columnas.
+  - **Animaciones UI / Motion:** `motion` (`motion/react@^12.23.24`) para entradas/salidas de modales, colapsos de acordeón, barras de progreso, cuadros de confirmación, popovers portaled y feedback táctil (*tap scale*).
   - **Librerías clave:**
     - `papaparse@^5.5.4` (parseo y normalización de archivos CSV)
     - `xlsx` (parseo de archivos Excel `.xlsx` cargados dinámicamente)
     - `html-to-image@^1.11.13` (exportación del calendario a imagen PNG)
-    - `lucide-react@^0.546.0` (iconografía de la interfaz: `Sun`, `Moon`, `Menu`, `X`, `GraduationCap`, `Search`, `ChevronDown`, `Loader2`, `AlertTriangle`, `HelpCircle`, etc.)
+    - `lucide-react@^0.546.0` (iconografía de la interfaz: `Sun`, `Moon`, `Menu`, `X`, `GraduationCap`, `Search`, `ChevronDown`, `Loader2`, `AlertTriangle`, `HelpCircle`, `FileSpreadsheet`, etc.)
   - **Librerías auxiliares y utilidades:** `clsx@^2.1.1` y `tailwind-merge@^3.6.0` (combinación condicional de clases CSS).
 
 ---
@@ -39,17 +40,17 @@ Horario-Académico/
 ├── src/                        # Código fuente de la aplicación.
 │   ├── App.tsx                 # Estado global, theme toggle, mobile drawer, export PNG spinner, modal prerrequisitos, ConfirmDialog.
 │   ├── main.tsx                # Punto de entrada de React que renderiza App.tsx en el DOM.
-│   ├── index.css               # Importaciones base de Tailwind CSS + tokens de variables CSS (:root y .dark).
+│   ├── index.css               # Importaciones base de Tailwind CSS + tokens de variables CSS (:root y .dark con paletas Neón).
 │   ├── types.ts                # Interfaces de TypeScript y constantes de días/horas.
 │   ├── components/             # Componentes de la interfaz de usuario.
-│   │   ├── ActivityCard.tsx    # Tarjeta gráfica para clases agendadas (badge de Grupo, tooltip con Modalidad/Grupo/Créditos/Profesor/Sala, a11y keyboard y aviso de antecedentes).
-│   │   ├── Calendar.tsx        # Estructura del calendario (grid min-w-[720px], sticky left time column z-30, horizontal scroll).
-│   │   ├── ColumnMappingDialog.tsx # Modal para mapeo manual de columnas CSV (a11y focus trap + escape listener).
+│   │   ├── ActivityCard.tsx    # Tarjeta gráfica para clases agendadas (badge de Grupo, tooltip con detalles, a11y keyboard, aviso de antecedentes y Color Picker en portal z-[200]).
+│   │   ├── Calendar.tsx        # Estructura del calendario (grid min-w-[720px], sticky left time column z-40, sticky header z-[70]/z-[80], horizontal scroll).
+│   │   ├── ColumnMappingDialog.tsx # Modal de mapeo de columnas CSV con Radix UI Select + Framer Motion (`AnimatedSelect`) y proporciones móviles fluidas.
 │   │   ├── ConfirmDialog.tsx   # Modal de confirmación estilizado y animado (reemplazo de window.confirm).
-│   │   ├── DayColumn.tsx       # Columna de un día: dropdowns a11y interactivos móviles con auto-centrado y manejo inteligente de widths/z-index.
-│   │   ├── ExcelSheetDialog.tsx # Diálogo iterativo para seleccionar múltiples hojas de cálculo desde un solo `.xlsx`.
+│   │   ├── DayColumn.tsx       # Columna de un día: menú flotante de celda activa (z-[65]), tarjetas agendadas z-10 (hover z-[60]) y respetuoso del toggle showAntecedentes.
+│   │   ├── ExcelSheetDialog.tsx # Diálogo iterativo para seleccionar hojas de cálculo con resaltado interactivo de filas y checkboxes acentuados (`accent`).
 │   │   ├── PrerequisiteChecklist.tsx # Modal emergente con buscador, acordeón por semestre, selección masiva y Motion.
-│   │   ├── SubjectSelectionModal.tsx # Modal de "Selección Rápida": listado con buscador, filtrado por materias aprobadas y conflictos de horario.
+│   │   ├── SubjectSelectionModal.tsx # Modal de "Selección Rápida": listado con buscador, filtrado por materias aprobadas (respetando showAntecedentes) y conflictos de horario.
 │   │   └── Uploader.tsx        # Carga de CSV y Excel con interceptor para hojas, preview → fingerprint → cache/auto-suggest → dialog.
 │   ├── data/                   # Catálogos de datos estáticos.
 │   │   ├── aliasAsignaturas.ts # Tabla de normalización/mapeo de nombres del CSV a la malla (incluye typos reales).
@@ -82,244 +83,59 @@ Horario-Académico/
 La aplicación implementa un sistema de temas persistente definido en `DESIGN.md` y `src/index.css`:
 
 - **Tokens CSS Custom Properties:**
-  - `:root` para **Light Mode** (`--bg-app: #f8fafc`, `--bg-surface: #ffffff`, `--text-main: #0f172a`, `--border-subtle: #e2e8f0`, etc.).
-  - `.dark` para **Dark Mode** (`--bg-app: #090d16`, `--bg-surface: #121826`, `--text-main: #f1f5f9`, `--border-subtle: #1e293b`, etc.).
+  - `:root` para **Light Mode** (`--bg-app: #f8fafc`, `--bg-surface: #ffffff`, `--text-main: #0f172a`, `--border-subtle: #e2e8f0`, swatches pastel en `--swatch-*-bg` y text en `--swatch-*-text`).
+  - `.dark` para **Dark Mode** (`--bg-app: #090d16`, `--bg-surface: #111827`, `--text-main: #f9fafb`, `--border-subtle: #1f2937`, etc.).
+  - **Estilo Neón / Translúcido Glassmorphic en `.dark`:**
+    Las tarjetas de color en modo oscuro emplean un fondo traslúcido compuesto por el color puro de la paleta al 15% de opacidad (`rgba(..., 0.15)`) combinado con texto vibrante (nivel 400 de Tailwind, ej. `#f472b6` para Rosa, `#818cf8` para Índigo). Esto evita que los colores se perciban como vino/negro y garantiza fidelidad total a su nombre.
 - **Persistencia en `App.tsx`:**
   - Estado `theme` inicializado desde `localStorage.getItem('theme')` o preferencia del sistema (`prefers-color-scheme`).
   - Aplica o remueve la clase `.dark` sobre `document.documentElement`.
   - Botón selector en la barra superior con iconos `Sun` / `Moon`.
 
-### Esquema del CSV y sistema de mapeo de columnas
-
-El parser soporta **15 campos canónicos** definidos en `src/utils/columnMapping.ts`. Dos son obligatorios (`Asignatura`, `Grupo`) y al menos un día de la semana debe estar mapeado. El resto es opcional:
-
-- `Modalidad`: Modalidad de la materia (ej. "Presencial", "OPTATIVA").
-- `Asignatura` (**obligatorio**): Nombre de la materia.
-- `Créditos`: Número de créditos académicos.
-- `Grupo` (**obligatorio**): Código o número de grupo.
-- `Profesor`: Nombre del docente.
-- `Antecedentes`: Requisitos previos o asignaturas requeridas.
-- `Sala`: Aula o espacio asignado.
-- `Horario`: Texto descriptivo original del horario.
-- `Lunes`, `Martes`, `Miércoles`, `Jueves`, `Viernes`, `Sábado`, `Domingo`: Rangos horarios por día.
-
-**Flujo de mapeo al subir un CSV:**
-
-1. Se lee preview (encabezados + 3 filas) vía `previewCSV()` sin parsear todo el archivo.
-2. Se calcula `fingerprintHeaders(headers)` — huella ordenada y normalizada de los encabezados.
-3. Se busca en `localStorage` clave `columnMappings` (un `Record<fingerprint, ColumnMapping>`) si ya hay un mapeo confirmado para ese fingerprint → usarlo directo.
-4. Si no hay mapeo guardado, se calcula `suggestColumnMapping(headers)` por coincidencia normalizada.
-5. Si `mappingIsHighConfidence(mapping)` (todos los campos excepto Domingo mapeados) → procesar directo y guardar fingerprint.
-6. Si no → abrir `<ColumnMappingDialog />` con vista previa y sugerencias pre-rellenadas. El botón "Confirmar" solo se habilita si `mappingCoversEssentials()` (Asignatura + Grupo + ≥1 día). Al confirmar, se guarda el fingerprint.
-
-### Esquema de la Malla Curricular (`src/data/mallaCurricular.json`)
-
-```typescript
-
-export interface MateriaMalla {
-  id: string;
-  nombre: string;
-  creditos: number;
-  semestre: number;
-  antecedentes: string[];
-  desbloquea: string[];
-}
-
-export interface HitoMalla {
-  id: string;
-  nombre: string;
-  creditos_obligatorios_requeridos: number;
-  descripcion: string;
-}
-
-```
-
-
-
-### Interfaces en TypeScript (`src/types.ts`)
-
-```typescript
-
-export type DayOfWeek = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
-
-export const DAYS: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-export const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7 to 21
-
-export interface TimeRange {
-  start: number; // Minutos desde la medianoche (ej. 420 = 7:00 AM)
-  end: number;   // Minutos desde la medianoche (ej. 540 = 9:00 AM)
-  originalText: string;
-}
-
-export interface ActivitySchedule {
-  day: DayOfWeek;
-  timeRange: TimeRange;
-}
-
-export interface LoadedFile {
-  id: string;
-  name: string;
-  count: number;
-}
-
-export interface Activity {
-  id: string; // Generado mediante `${asignatura}-${grupo}`
-  modalidad: string;
-  asignatura: string;
-  creditos: string;
-  grupo: string;
-  profesor: string;
-  antecedentes: string;
-  sala: string;
-  horarioTexto: string;
-  schedules: ActivitySchedule[];
-  color: string;
-  sourceFile?: string;
-}
-
-```
-
 ---
 
-## 4. Arquitectura UI/UX Impeccable y Componentes Clave
+## 4. Jerarquía Visual y Capas de Apilamiento (Z-Index Architecture)
 
-### A. Modal Emergente de Historial de Prerrequisitos (`PrerequisiteChecklist.tsx`)
+Para evitar solapamientos visuales y asegurar una interacción limpia en escritorios y móviles, la aplicación mantiene un orden estricto de profundiades `z-index`:
 
-Transformado en un modal emergente centrado estilo pop-up:
-
-- **Estructura Diálogo Modal:** `fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4`.
-- **Cierre por Backdrop Click:** Evento `onClick` sobre el contenedor principal (`e.target === e.currentTarget`) que cierra el modal al presionar fuera del cuadro.
-- **Teclado / a11y:** Cierre con la tecla `Escape`, botón de cierre `X` y atributos ARIA (`role="dialog"`, `aria-modal="true"`).
-- **Animaciones Motion (`motion/react`):**
-  - Entrada y salida del modal con efecto *Spring* (`AnimatePresence` + `motion.div` con `scale: 0.96 -> 1` y `opacity: 0 -> 1`).
-  - Colapso/expansión animada de semestres con transiciones de altura (`height: 'auto' -> 0`) y rotación de flechas 180°.
-  - Micro-interacción táctil en materias (`whileTap={{ scale: 0.98 }}`).
-  - Barra de progreso animada por semestre según las materias aprobadas.
-- **Buscador Instantáneo:** Filtra materias por nombre en tiempo real sin importar el semestre.
-- **Selección Masiva por Semestre:** Checkbox en la cabecera de cada semestre para aprobar o desaprobar todas sus materias de un solo clic.
-
-### B. Componente Diálogo de Confirmación Reusable (`ConfirmDialog.tsx`)
-
-- Reemplaza los avisos nativos del navegador (`window.confirm`) por una ventana flotante de confirmación sobria y animada.
-- **Animaciones Motion:** Entrada y salida con escala *spring* y difuminado de fondo (*backdrop blur*).
-- **Variantes Visuales:** `danger` (rojo), `warning` (ámbar) e `info` (azul) con iconos `AlertTriangle` / `HelpCircle`.
-- **Cierre:** Soporta cierre por tecla `Escape`, clic exterior (*backdrop*) o botón `X` / "Cancelar".
-- **Usos Activos:** Confirmación de importación de JSON en `PrerequisiteChecklist.tsx`, y confirmación de "Reiniciar Calendario" / "Eliminar CSV" / "Limpiar Todo" en `App.tsx`.
-
-### C. Tarjeta Interactiva en la Barra Lateral (`App.tsx`)
-
-- Reemplaza el antiguo acordeón del sidebar por un botón/tarjeta sobria con icono `GraduationCap` que muestra el número de materias aprobadas y al pulsar abre el modal emergente.
-
-### D. Layout Responsivo Móvil & Calendario Deslizable
-
-- **Mobile Drawer:** En pantallas pequeñas (< 768px), la barra lateral se oculta y se despliega como un panel lateral desizable (`isMobileSidebarOpen`) accionado por un botón de menú hamburguesa (`Menu`) en la cabecera.
-- **Calendario con Ancho Garantizado & Horas Fijas (`Calendar.tsx`):**
-  - Contenedor con `min-w-[720px]` y desplazamiento horizontal (`overflow-x-auto`) en dispositivos móviles.
-  - La columna de horas se mantiene fija a la izquierda mediante `sticky left-0 z-30` con fondo opaco `bg-[var(--bg-surface)]` y sombra.
-  - La celda superior izquierda se mantiene fija en `sticky top-0 left-0 z-40`.
-  - Las tarjetas de materias agendadas en `DayColumn.tsx` usan `z-10` (hover `z-20`), deslizándose por detrás de la columna fija de horas sin solapamientos visuales.
-
-### E. Exportación PNG con Spinner (`App.tsx`)
-
-- Botón de descarga PNG que activa el estado `isExporting`, deshabilita el botón e inserta un icono giratorio `Loader2`.
-- Resuelve la descarga en Chrome mediante conversión del Data URL en `Blob` y `URL.createObjectURL(blob)`.
+- **Nivel Fondo y Base (`z-0` a `z-20`):**
+  - `z-0`: Grilla de líneas horizontales de fondo del calendario.
+  - `z-10`: Tarjetas de materias (`ActivityCard`) en reposo y Sidebar en versión escritorio (`lg:z-10`).
+  - `z-20`: Header superior y Footer de la aplicación.
+- **Nivel Calendario y Scroll (`z-40` a `z-80`):**
+  - `z-40`: Columna lateral fija de horas (`sticky left-0`).
+  - `z-50`: Tooltips emergentes de detalles en `ActivityCard`.
+  - `z-[60]`: Estado `hover` y enfoque de tarjetas de materias en el calendario (`hover:z-[60]`).
+  - `z-[65]`: Celda activa del calendario y menú desplegable de "Materias Disponibles" (`DayColumn.tsx`), colocado por encima de tarjetas en hover para evitar bloqueos.
+  - `z-[70]`: Encabezado sticky de días de la semana (Lunes-Domingo).
+  - `z-[80]`: Celda de origen (esquina superior izquierda) del calendario.
+- **Nivel Navegación Móvil y Botones Flotantes (`z-[90]` a `z-[100]`):**
+  - `z-[90]`: Botón flotante "Lista Rápida" (esquina inferior derecha) y fondo velado (*backdrop*) del menú móvil.
+  - `z-[100]`: Menú desplegable lateral (Drawer) en dispositivos móviles.
+- **Nivel Modales y Popovers Globales (`z-[200]` a `z-[300]`):**
+  - `z-[200]`: Diálogos emergentes principales (`ConfirmDialog`, `ExcelSheetDialog`, `PrerequisiteChecklist`, `SubjectSelectionModal`, `ColumnMappingDialog` contenedor backdrop y Popover de Color Picker de `ActivityCard`).
+  - `z-[300]`: Menús flotantes de selección en Radix UI (`AnimatedSelect` en `ColumnMappingDialog.tsx`).
 
 ---
 
 ## 5. Lógica central y persistencia
 
-### A. Formateo de sesiones semanales múltiples en el desplegable de materias
+### A. Control Estricto del Toggle "Validar Prerrequisitos" (`showAntecedentes`)
 
-Ubicación: `src/utils/time.ts`
+- Cuando `showAntecedentes` es `true`, el sistema consulta `materiasCompletadas` para mostrar las asignaturas aprobadas de forma atenuada con la etiqueta "Ya aprobada" e inhabilita su selección tanto en los desplegables de hora como en la Lista Rápida (`SubjectSelectionModal`).
+- Cuando `showAntecedentes` es `false`, se deshabilita por completo la verificación de materias completadas en la grilla y modales. Las asignaturas aprobadas ya no muestran el rótulo "Ya aprobada" ni sufren atenuación/bloqueo, permitiendo agregarlas libremente a la agenda.
 
-```typescript
+### B. Formateo de sesiones semanales múltiples
 
-export function formatWeeklySchedules(schedules: ActivitySchedule[]): string {
-  if (!schedules || schedules.length <= 1) return '';
+Ubicación: `src/utils/time.ts` (`formatWeeklySchedules`)
 
-  const groupsByTime = new Map<string, DayOfWeek[]>();
+Agrupa rangos horarios idénticos en días consecutivos o dispersos (ej. "Lunes y Miércoles 08:00-10:00, Viernes 08:00-10:00").
 
-  for (const s of schedules) {
-    const timeStr = `${formatTime(s.timeRange.start)}-${formatTime(s.timeRange.end)}`;
-    if (!groupsByTime.has(timeStr)) {
-      groupsByTime.set(timeStr, []);
-    }
-    const daysList = groupsByTime.get(timeStr)!;
-    if (!daysList.includes(s.day)) {
-      daysList.push(s.day);
-    }
-  }
+### C. Persistencia con Versionado de Esquema
 
-  const parts: string[] = [];
+Ubicación: `src/utils/storage.ts` (`SCHEMA_VERSION = 1`)
 
-  for (const [timeStr, days] of groupsByTime.entries()) {
-    let daysStr = '';
-    if (days.length === 1) {
-      daysStr = days[0];
-    } else if (days.length === 2) {
-      daysStr = `${days[0]} y ${days[1]}`;
-    } else {
-      const last = days[days.length - 1];
-      const rest = days.slice(0, days.length - 1).join(', ');
-      daysStr = `${rest} y ${last}`;
-    }
-    parts.push(`${daysStr} ${timeStr}`);
-  }
-
-  return parts.join(', ');
-}
-
-```
-
-### B. Sistema de control de versiones y guardado/recuperación en localStorage
-
-Ubicación: `src/utils/storage.ts`
-
-```typescript
-
-export const SCHEMA_VERSION = 1;
-
-interface VersionedPayload<T> {
-  version: number;
-  data: T;
-}
-
-export function loadFromStorage<T>(key: string, fallback: T): T {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
-
-  try {
-    const parsed = JSON.parse(raw);
-
-    if (!parsed || typeof parsed !== 'object' || !('version' in parsed) || !('data' in parsed)) {
-      console.warn(`[storage] "${key}" sin versión de esquema, se descarta.`);
-      return fallback;
-    }
-
-    const versioned = parsed as VersionedPayload<T>;
-    if (versioned.version !== SCHEMA_VERSION) {
-      console.warn(`[storage] "${key}" con esquema desactualizado (v${versioned.version} ≠ v${SCHEMA_VERSION}), se descarta.`);
-      return fallback;
-    }
-
-    if (Array.isArray(fallback) && !Array.isArray(versioned.data)) {
-      console.warn(`[storage] "${key}" con forma inesperada (se esperaba un array), se descarta.`);
-      return fallback;
-    }
-
-    return versioned.data;
-  } catch (e) {
-    console.error(`[storage] Error al leer "${key}" de localStorage`, e);
-    return fallback;
-  }
-}
-
-export function saveToStorage<T>(key: string, data: T): void {
-  const payload: VersionedPayload<T> = { version: SCHEMA_VERSION, data };
-  localStorage.setItem(key, JSON.stringify(payload));
-}
-
-```
+Mantiene la sincronización de materias seleccionadas, avances de prerrequisitos, firmas de mapeo de columnas y tema mediante payloads versionados que previenen errores por desactualización de formato.
 
 ---
 
@@ -336,16 +152,13 @@ export function saveToStorage<T>(key: string, data: T): void {
 
 ## 7. Cambios respecto a versiones anteriores
 
-- **Rediseño Minimalista Impeccable:** Creación de `PRODUCT.md` y `DESIGN.md`. Eliminación de colores genéricos por una paleta HSL con modos Claro y Oscuro.
-- **Transformación de Prerrequisitos:** El checklist pasó de ser un acordeón en la barra lateral a un modal emergente interactivo completo con buscador, selección masiva, semestres colapsables y animaciones Motion.
-- **Sustitución de `window.confirm` por `<ConfirmDialog />`:** Creación de un modal de confirmación sobrio animado con Motion para reemplazar todas las ventanas nativas emergentes del navegador.
-- **Catálogo de Optativas Dinámico:** Se eliminó el catálogo en duro de materias optativas; ahora sus prerrequisitos se extraen al vuelo analizando la descripción en el CSV.
-- **Responsividad Móvil Inteligente:** Adición del Drawer deslizable para el menú, scroll horizontal con horas `sticky` en el calendario, anchos proporcionales en los menús desplegables (`vw`), y centrado dinámico al seleccionarlos (`scrollIntoView`).
-- **Modal de Selección Rápida:** Implementación de un modal con barra de búsqueda para añadir varias materias consecutivamente desde una lista, con dimensiones puramente responsivas (`vw/vh`) en móvil y un diseño libre de emojis para mayor legibilidad.
-- **Saneamiento del Repositorio:** Eliminación de dependencias no utilizadas (como express, html2canvas, @google/genai, dotenv, tsx) provenientes de la plantilla original, borrado de archivos redundantes (`.env`, `metadata.json`) y anonimización de nombres de profesores en los archivos de prueba para la privacidad de los datos.
-- **Ocultamiento Contextual Inteligente:** Las materias ya aprobadas se visualizan atenuadas (opacidad 50%, "Ya aprobada", sin botón de añadir) en los menús desplegables del calendario y en el modal de Selección Rápida para reducir carga cognitiva sin causar confusión.
-- **Jerarquía Visual Consistente:** Consolidación estructural de los valores de profundidad (`z-[200]`) para asegurar que todos los modales (incluyendo *Prerrequisitos*, *Confirmación*, *Mapeo*, *Selección Rápida* y *Selección de Excel*) flotan siempre impecablemente por encima de los encabezados fijos (`z-[80]`) del calendario, integrando en paralelo transiciones completas mediante *Motion* de Framer a componentes emergentes adicionales como `<ExcelSheetDialog />`.
-- **Accesibilidad Mejorada:** Soporte de navegación por teclado (`tabIndex`, `role="button"`, `onKeyDown` para `Enter`/`Space`/`Escape`) en tarjetas y celdas.
+- **Modo Oscuro Neón / Translúcido (Glassmorphism):** Rediseño de las variables CSS de swatches en `.dark` usando `rgba(..., 0.15)` y tonos de texto vibrantes (400) para asegurar fidelidad exacta a nombres de colores (Rosa, Fucsia, etc.).
+- **Integración de Radix UI Select + Framer Motion:** Reemplazo de selectores nativos por primitivas accesibles `@radix-ui/react-select` animadas (`AnimatedSelect`) en `ColumnMappingDialog.tsx`, con manejo de valores renderizados explícitamente y comportamiento proporcional adaptado a móviles.
+- **Normalización y Robustez de Z-Index:** Reestructuración jerárquica desde `z-0` hasta `z-[300]` para garantizar que popups de celdas (`z-[65]`), botón flotante (`z-[90]`), modales (`z-[200]`) y menús de Radix (`z-[300]`) no sufran bloqueos o superposiciones indebidas por tarjetas en estado `hover` (`z-[60]`).
+- **Respeto Absoluto del Toggle de Prerrequisitos:** Corrección en `DayColumn.tsx` y `SubjectSelectionModal.tsx` para inhibir las leyendas y bloqueos de "Ya aprobada" cuando `showAntecedentes` está desactivado (`FALSE`).
+- **Rediseño del Seleccionador de Hojas de Excel (`ExcelSheetDialog.tsx`):** Compatibilidad con Tailwind v4 usando `accent-[var(--color-primary)]` y resaltado dinámico de filas seleccionadas con fondos traslúcidos azules.
+- **Portales y Animaciones en Popovers:** Corrección del Color Picker en `ActivityCard.tsx` invirtiendo el anidamiento para portalar `<AnimatePresence>` al `document.body` con elevación `z-[200]`.
+- **Sustitución de `window.confirm` por `<ConfirmDialog />`:** Modal de confirmación sobrio animado con Motion para reemplazar avisos nativos.
 
 ---
 

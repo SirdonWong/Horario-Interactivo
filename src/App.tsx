@@ -659,16 +659,18 @@ export default function App() {
         </div>
       </footer>
 
-      {pendingMapping && (
-        <ColumnMappingDialog
-          headers={pendingMapping.preview.headers}
-          sampleRows={pendingMapping.preview.sampleRows}
-          initialMapping={pendingMapping.initialMapping}
-          fileName={pendingMapping.file.name}
-          onConfirm={handleMappingConfirm}
-          onCancel={handleMappingCancel}
-        />
-      )}
+      <AnimatePresence>
+        {pendingMapping && (
+          <ColumnMappingDialog
+            headers={pendingMapping.preview.headers}
+            sampleRows={pendingMapping.preview.sampleRows}
+            initialMapping={pendingMapping.initialMapping}
+            fileName={pendingMapping.file.name}
+            onConfirm={handleMappingConfirm}
+            onCancel={handleMappingCancel}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {pendingExcel && (
@@ -741,6 +743,7 @@ export default function App() {
         availableActivities={availableActivities}
         selectedActivities={selectedActivities}
         materiasCompletadas={materiasCompletadasSet}
+        showAntecedentes={showAntecedentes}
         onSelectActivity={handleSelectActivity}
         onRemoveActivity={handleRemoveActivity}
       />

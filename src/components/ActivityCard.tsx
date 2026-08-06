@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { formatTime } from '../utils/time';
 import { X } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getPendingPrerequisites, getMateriaNotas } from '../utils/curriculum';
 import { ASSIGNMENT_COLORS, getEffectiveColorId } from '../utils/colors';
 import { motion, AnimatePresence } from 'motion/react';
@@ -25,7 +26,9 @@ interface ActivityCardProps {
 export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas, showAntecedentes = true, colorOverrides, onColorChange, useColorfulMode }: ActivityCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number; openUpward: boolean } | null>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const antecedentesPendientes = materiasCompletadas ? getPendingPrerequisites(activity.asignatura, activity.antecedentes, materiasCompletadas) : [];
   const notasMateria = getMateriaNotas(activity.asignatura);
@@ -98,8 +101,21 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       
       {/* Color picker trigger */}
       <button
+        ref={triggerRef}
         onClick={(e) => {
           e.stopPropagation();
+          if (!showColorPicker && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            const popoverHeight = 110;
+            const openUpward = rect.top > popoverHeight;
+            let top = openUpward ? rect.top - popoverHeight : rect.bottom + 4;
+            let left = rect.left + 4;
+            const popoverWidth = 144;
+            if (left + popoverWidth > window.innerWidth) {
+              left = window.innerWidth - popoverWidth - 8;
+            }
+            setPopoverPosition({ top, left, openUpward });
+          }
           setShowColorPicker(!showColorPicker);
         }}
         onTouchStart={(e) => e.stopPropagation()}
@@ -110,44 +126,48 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       />
 
       {/* Color Picker Popover */}
-      <AnimatePresence>
-        {showColorPicker && (
-          <motion.div
-            ref={colorPickerRef}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-6 left-1 z-50 w-36 p-2 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl grid grid-cols-4 gap-1.5 cursor-default"
-          >
-            {ASSIGNMENT_COLORS.map(c => (
+      {createPortal(
+        <AnimatePresence>
+          {showColorPicker && popoverPosition && (
+            <motion.div
+              ref={colorPickerRef}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed z-[200] w-36 p-2 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl grid grid-cols-4 gap-1.5 cursor-default"
+              style={{ top: popoverPosition.top, left: popoverPosition.left }}
+            >
+              {ASSIGNMENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onColorChange(activity.asignatura, c);
+                    setShowColorPicker(false);
+                  }}
+                  className="w-full aspect-square rounded-full flex items-center justify-center hover:scale-110 transition-transform border border-black/10 dark:border-white/10"
+                  style={{ backgroundColor: `var(--swatch-${c}-text)` }}
+                  title={c}
+                />
+              ))}
               <button
-                key={c}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onColorChange(activity.asignatura, c);
+                  onColorChange(activity.asignatura, "");
                   setShowColorPicker(false);
                 }}
-                className="w-full aspect-square rounded-full flex items-center justify-center hover:scale-110 transition-transform border border-black/10 dark:border-white/10"
-                style={{ backgroundColor: `var(--swatch-${c}-text)` }}
-                title={c}
-              />
-            ))}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onColorChange(activity.asignatura, "");
-                setShowColorPicker(false);
-              }}
-              className="w-full aspect-square rounded-full flex items-center justify-center hover:scale-110 transition-transform border border-dashed border-[var(--border-strong)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--color-primary)]"
-              title="Restaurar color original"
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                className="w-full aspect-square rounded-full flex items-center justify-center hover:scale-110 transition-transform border border-dashed border-[var(--border-strong)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--color-primary)]"
+                title="Restaurar color original"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       <button
         onClick={(e) => {
@@ -164,7 +184,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
 
       {/* Tooltip / Details */}
       {showTooltip && (
-        <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] text-xs font-sans">
+        <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] break-words text-xs font-sans">
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Modalidad:</strong> {activity.modalidad || 'N.A.'}</p>
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Grupo:</strong> {activity.grupo}</p>
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Créditos:</strong> {activity.creditos || 'N.A.'}</p>

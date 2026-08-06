@@ -85,23 +85,34 @@ export function ExcelSheetDialog({
               </div>
 
               <div className="border border-[var(--border-subtle)] rounded-lg divide-y divide-[var(--border-subtle)] bg-[var(--bg-app)] overflow-hidden">
-                {sheets.map(sheet => (
-                  <motion.label 
-                    whileTap={{ scale: 0.98 }}
-                    key={sheet} 
-                    className="flex items-center px-4 py-3 hover:bg-[var(--bg-surface)] cursor-pointer transition-colors group"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected.has(sheet)}
-                      onChange={() => toggleSheet(sheet)}
-                      className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
-                    />
-                    <span className="ml-3 text-sm font-medium text-[var(--text-main)] group-hover:text-[var(--color-primary)] transition-colors">
-                      {sheet}
-                    </span>
-                  </motion.label>
-                ))}
+                {sheets.map(sheet => {
+                  const isChecked = selected.has(sheet);
+                  return (
+                    <motion.label 
+                      whileTap={{ scale: 0.98 }}
+                      key={sheet} 
+                      className={`flex items-center px-4 py-3 cursor-pointer transition-colors group ${
+                        isChecked 
+                          ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' 
+                          : 'hover:bg-[var(--bg-surface-hover)]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSheet(sheet)}
+                        className="w-4 h-4 rounded border-[var(--border-strong)] accent-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                      />
+                      <span className={`ml-3 text-sm font-medium transition-colors ${
+                        isChecked 
+                          ? 'text-[var(--color-primary)]' 
+                          : 'text-[var(--text-main)] group-hover:text-[var(--color-primary)]'
+                      }`}>
+                        {sheet}
+                      </span>
+                    </motion.label>
+                  );
+                })}
               </div>
             </div>
           )}
