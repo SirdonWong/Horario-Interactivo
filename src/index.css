@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-app: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-primary-light: #eff6ff;
+    --color-success: #16a34a;
+    --color-warning: #d97706;
+    --color-danger: #dc2626;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+
+    --swatch-indigo-bg: #e0e7ff;
+    --swatch-indigo-text: #312e81;
+    --swatch-emerald-bg: #d1fae5;
+    --swatch-emerald-text: #064e3b;
+    --swatch-blue-bg: #dbeafe;
+    --swatch-blue-text: #1e3a8a;
+    --swatch-amber-bg: #fef3c7;
+    --swatch-amber-text: #78350f;
+    --swatch-rose-bg: #ffe4e6;
+    --swatch-rose-text: #881337;
+    --swatch-fuchsia-bg: #fae8ff;
+    --swatch-fuchsia-text: #701a75;
+    --swatch-teal-bg: #ccfbf1;
+    --swatch-teal-text: #134e4a;
+    --swatch-cyan-bg: #cffafe;
+    --swatch-cyan-text: #164e63;
+    --swatch-violet-bg: #ede9fe;
+    --swatch-violet-text: #4c1d95;
+    --swatch-orange-bg: #ffedd5;
+    --swatch-orange-text: #7c2d12;
+    --swatch-sky-bg: #e0f2fe;
+    --swatch-sky-text: #0c4a6e;
+    --swatch-lime-bg: #ecfccb;
+    --swatch-lime-text: #365314;
+    --swatch-pink-bg: #fce7f3;
+    --swatch-pink-text: #831843;
+    --swatch-purple-bg: #f3e8ff;
+    --swatch-purple-text: #581c87;
+  }
+
+  .dark {
+    --bg-app: #090d16;
+    --bg-surface: #111827;
+    --bg-surface-hover: #1f2937;
+    --border-subtle: #1f2937;
+    --border-strong: #374151;
+    --text-main: #f9fafb;
+    --text-muted: #9ca3af;
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-primary-light: rgba(59, 130, 246, 0.12);
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+
+    --swatch-indigo-bg: #1e1b4b;
+    --swatch-indigo-text: #e0e7ff;
+    --swatch-emerald-bg: #022c22;
+    --swatch-emerald-text: #d1fae5;
+    --swatch-blue-bg: #172554;
+    --swatch-blue-text: #dbeafe;
+    --swatch-amber-bg: #451a03;
+    --swatch-amber-text: #fef3c7;
+    --swatch-rose-bg: #4c0519;
+    --swatch-rose-text: #ffe4e6;
+    --swatch-fuchsia-bg: #4a044e;
+    --swatch-fuchsia-text: #fae8ff;
+    --swatch-teal-bg: #042f2e;
+    --swatch-teal-text: #ccfbf1;
+    --swatch-cyan-bg: #083344;
+    --swatch-cyan-text: #cffafe;
+    --swatch-violet-bg: #2e1065;
+    --swatch-violet-text: #ede9fe;
+    --swatch-orange-bg: #431407;
+    --swatch-orange-text: #ffedd5;
+    --swatch-sky-bg: #082f49;
+    --swatch-sky-text: #e0f2fe;
+    --swatch-lime-bg: #1a2e05;
+    --swatch-lime-text: #ecfccb;
+    --swatch-pink-bg: #500724;
+    --swatch-pink-text: #fce7f3;
+    --swatch-purple-bg: #3b0764;
+    --swatch-purple-text: #f3e8ff;
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
