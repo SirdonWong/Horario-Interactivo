@@ -2,7 +2,7 @@
 
 Herramienta interactiva para armar tu horario del semestre a partir de la oferta académica en CSV o Excel, con detección de conflictos, seguimiento de prerrequisitos y exportación a imagen.
 
-Es un proyecto hecho por un estudiante para su propia generación — no es una herramienta oficial de la universidad ni de la facultad.
+Esto es un proyecto hecho por un estudiante. **No es una herramienta oficial de la universidad ni de la facultad**.
 
 ## ¿Qué hace?
 
@@ -22,13 +22,13 @@ La validación de prerrequisitos usa una malla curricular específica (la de Psi
 
 ## Cómo usarlo
 
-1. Consigue el archivo de oferta académica del semestre (CSV o Excel) — normalmente lo comparte tu facultad o coordinación. La app no trae ningún archivo de oferta precargado; cada quien sube el suyo.
+1. Consigue el archivo de oferta académica del semestre (CSV o Excel); normalmente lo comparte tu facultad o coordinación. La app no trae ningún archivo de oferta precargado; cada quien sube el suyo.
 2. Entra a la app y usa el botón **"Cargar Archivo(s)"**.
-3. Si la app no reconoce automáticamente las columnas de tu archivo, te va a pedir que confirmes manualmente a qué corresponde cada una (Asignatura, Grupo, Horario, etc.) — es un paso de una sola vez por archivo.
+3. Si la app no reconoce automáticamente las columnas de tu archivo, te va a pedir que confirmes manualmente a qué corresponde cada una (Asignatura, Grupo, Horario, etc.); es un paso de una sola vez por archivo.
 4. Selecciona las materias que quieras agregar a tu horario haciendo clic en ellas desde el listado.
 5. Ajusta colores, revisa conflictos, y exporta cuando esté listo.
 
-Tu selección y tus archivos cargados quedan guardados en tu navegador — si cierras la pestaña y vuelves después, todo sigue ahí. Esto también significa que **es local a ese navegador y ese dispositivo**: no se sincroniza entre tu computadora y tu celular, por ejemplo.
+Tu selección y tus archivos cargados quedan guardados en tu navegador; si cierras la pestaña y vuelves después, todo sigue ahí. Esto también significa que **es local a ese navegador y ese dispositivo**: no se sincroniza entre tu computadora y tu celular, por ejemplo.
 
 ## Correr el proyecto localmente
 
@@ -48,7 +48,7 @@ npm run build
 npm run preview
 ```
 
-No se requiere ninguna variable de entorno ni API key — todo el procesamiento (CSV, horarios, prerrequisitos) corre localmente en el navegador.
+No se requiere ninguna variable de entorno ni API key; todo el procesamiento (CSV, horarios, prerrequisitos) corre localmente en el navegador.
 
 ## Stack técnico
 
