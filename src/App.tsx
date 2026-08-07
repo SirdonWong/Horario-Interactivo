@@ -351,21 +351,21 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-2 sm:px-6 py-2 sm:py-3 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 z-20 shadow-[var(--shadow-sm)]">
+      <header className="flex items-center justify-between px-2 sm:px-6 py-2.5 sm:py-3 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 z-20 shadow-[var(--shadow-sm)]">
         <div className="flex items-center space-x-1 sm:space-x-2.5">
           {/* Mobile Sidebar Toggle Button */}
           <button
             onClick={() => setIsMobileSidebarOpen(prev => !prev)}
-            className="p-1 sm:p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all"
+            className="p-1.5 sm:p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all"
             aria-label="Abrir panel de opciones"
             title="Panel de opciones"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
           </button>
 
           <div>
             <h1 
-              className="text-xs sm:text-lg font-bold italic tracking-tight text-[var(--text-main)] leading-none truncate"
+              className="text-sm sm:text-lg font-bold italic tracking-tight text-[var(--text-main)] leading-none truncate"
               style={{ fontFamily: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" }}
             >
               Horario Académico
@@ -393,7 +393,7 @@ export default function App() {
           {/* Colorful Mode Toggle Button */}
           <button
             onClick={() => setUseColorfulMode(prev => !prev)}
-            className={`p-1 sm:p-2 rounded-lg border transition-all flex items-center justify-center ${
+            className={`p-1.5 sm:p-2 rounded-lg border transition-all flex items-center justify-center ${
               useColorfulMode 
                 ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]" 
                 : "border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]"
@@ -401,17 +401,17 @@ export default function App() {
             title="Alternar colores automáticos"
             aria-label="Toggle colorful mode"
           >
-            <Palette className={`w-4 h-4 ${useColorfulMode ? "opacity-100" : "opacity-70"}`} />
+            <Palette className={`w-[18px] h-[18px] sm:w-4 sm:h-4 ${useColorfulMode ? "opacity-100" : "opacity-70"}`} />
           </button>
 
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-1 sm:p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
             title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
             aria-label="Toggle theme"
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            {theme === 'dark' ? <Sun className="w-[18px] h-[18px] sm:w-4 sm:h-4 text-amber-400" /> : <Moon className="w-[18px] h-[18px] sm:w-4 sm:h-4 text-slate-600" />}
           </button>
 
           {/* Uploader Component */}
@@ -428,16 +428,16 @@ export default function App() {
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex items-center px-2 py-1.5 sm:px-3.5 sm:py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
+              className="flex items-center px-2.5 py-2 sm:px-3.5 sm:py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
             >
               {isExporting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 sm:mr-1.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 sm:mr-1.5 animate-spin" />
                   <span className="hidden sm:inline">Generando...</span>
                 </>
               ) : (
                 <>
-                  <Download className="w-3.5 h-3.5 sm:mr-1.5" />
+                  <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 sm:mr-1.5" />
                   <span className="hidden sm:inline">Exportar PNG</span>
                 </>
               )}
