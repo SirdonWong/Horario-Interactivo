@@ -38,8 +38,9 @@ Horario-Académico/
 ├── package.json                # Dependencias, scripts del proyecto y configuración de paquetes.
 ├── tsconfig.json               # Configuración de TypeScript (incluye resolveJsonModule: true).
 ├── vite.config.ts              # Configuración del bundler Vite (plugins, alias @, chunk splitting para xlsx y exclusión de @radix-ui del vendor principal).
-├── assets/                     # Directorio de activos (actualmente vacío, solo contiene .aistudio/).
 ├── dist/                       # Directorio de salida del build de producción (generado por `vite build`).
+├── public/                     # Archivos estáticos servidos directamente por Vite.
+│   └── favicon.svg             # Favicon vectorial (grilla 3x3 de horario con celdas azules/gris) e ícono de marca.
 ├── scratch/                    # Scripts de verificación y pruebas funcionales de integración.
 │   ├── test_creditos_fallback.mjs  # Prueba de inferencia de créditos cuando la fila los omite.
 │   ├── test_http_and_html.mjs      # Prueba de conectividad HTTP 200 en localhost:3000.

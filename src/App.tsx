@@ -363,6 +363,8 @@ export default function App() {
             <Menu className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
 
+          <img src="/favicon.svg" alt="Logo" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 select-none" />
+
           <div>
             <h1 
               className="text-base sm:text-lg font-bold italic tracking-tight text-[var(--text-main)] leading-none truncate"
@@ -659,7 +661,7 @@ export default function App() {
           <span>{selectedActivities.length} seleccionadas</span>
         </div>
         <div className="hidden sm:block">
-          Horario Académico • Impeccable Design
+          Horario Académico
         </div>
       </footer>
 
