@@ -49,10 +49,21 @@ export function SubjectSelectionModal({
   // Filter activities based on search term
   const filteredActivities = useMemo(() => {
     const lowerSearch = searchTerm.toLowerCase();
-    return availableActivities.filter(a => 
-      a.asignatura.toLowerCase().includes(lowerSearch) ||
-      (a.profesor && a.profesor.toLowerCase().includes(lowerSearch))
-    );
+    const isSearchingGrupo = lowerSearch.includes('grupo');
+    
+    return availableActivities.filter(a => {
+      const scheduleText = formatWeeklySchedules(a.schedules) || '';
+      return (
+        a.asignatura.toLowerCase().includes(lowerSearch) ||
+        (a.profesor && a.profesor.toLowerCase().includes(lowerSearch)) ||
+        (a.grupo && (
+          String(a.grupo).toLowerCase().includes(lowerSearch) ||
+          (isSearchingGrupo && `grupo ${String(a.grupo).toLowerCase()}`.includes(lowerSearch))
+        )) ||
+        (a.sala && a.sala.toLowerCase().includes(lowerSearch)) ||
+        scheduleText.toLowerCase().includes(lowerSearch)
+      );
+    });
   }, [availableActivities, searchTerm]);
 
   return (
@@ -93,7 +104,7 @@ export function SubjectSelectionModal({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                 <input
                   type="text"
-                  placeholder="Buscar por materia o profesor..."
+                  placeholder="Buscar por materia, profesor, grupo, horario o sala..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-[var(--bg-surface)] text-[var(--text-main)] text-sm border border-[var(--border-subtle)] rounded-lg pl-9 pr-4 py-2 sm:py-2.5 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
