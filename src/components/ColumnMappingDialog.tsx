@@ -25,7 +25,7 @@ function AnimatedSelect({
       open={open}
       onOpenChange={setOpen}
     >
-      <Select.Trigger className="flex items-center justify-between w-full border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:bg-[var(--bg-surface-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)] rounded-lg px-2.5 py-1.5 text-xs focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all group">
+      <Select.Trigger className="flex items-center justify-between w-full border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:bg-[var(--bg-surface-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)] rounded-lg px-2.5 py-1.5 text-xs focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] outline-none transition-all group">
         <Select.Value>
           <span className="block truncate text-left flex-1 mr-2">
             {safeValue === '__NO_MAP__' ? '— No mapear —' : safeValue}

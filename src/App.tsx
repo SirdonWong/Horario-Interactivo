@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Activity, LoadedFile } from './types';
 import { Uploader, PendingMappingFile, processFileAfterMapping, processCsvFiles } from './components/Uploader';
 import { Calendar } from './components/Calendar';
-import { ColumnMappingDialog } from './components/ColumnMappingDialog';
+const ColumnMappingDialog = React.lazy(() => 
+  import('./components/ColumnMappingDialog').then(m => 
+    ({ default: m.ColumnMappingDialog })
+  )
+);
 import { ExcelSheetDialog } from './components/ExcelSheetDialog';
 import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette } from 'lucide-react';
 
@@ -661,14 +665,20 @@ export default function App() {
 
       <AnimatePresence>
         {pendingMapping && (
-          <ColumnMappingDialog
-            headers={pendingMapping.preview.headers}
-            sampleRows={pendingMapping.preview.sampleRows}
-            initialMapping={pendingMapping.initialMapping}
-            fileName={pendingMapping.file.name}
-            onConfirm={handleMappingConfirm}
-            onCancel={handleMappingCancel}
-          />
+          <Suspense fallback={
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 select-none">
+              <Loader2 className="w-10 h-10 text-[var(--color-primary)] animate-spin" />
+            </div>
+          }>
+            <ColumnMappingDialog
+              headers={pendingMapping.preview.headers}
+              sampleRows={pendingMapping.preview.sampleRows}
+              initialMapping={pendingMapping.initialMapping}
+              fileName={pendingMapping.file.name}
+              onConfirm={handleMappingConfirm}
+              onCancel={handleMappingCancel}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 

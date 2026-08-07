@@ -27,6 +27,11 @@ export default defineConfig(() => {
               if (id.includes('xlsx')) {
                 return 'vendor-xlsx';
               }
+              if (id.includes('@radix-ui')) {
+                return; // no lo agrupes en "vendor" — deja que Rollup lo 
+                        // separe automáticamente siguiendo el grafo del 
+                        // import() dinámico de ColumnMappingDialog
+              }
               return 'vendor';
             }
           },
