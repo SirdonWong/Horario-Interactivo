@@ -1,7 +1,7 @@
 import mallaObligatorias from '../data/mallaCurricular.json';
 import { aliasAsignaturas } from '../data/aliasAsignaturas';
  
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s
     .trim()
     .toLowerCase()

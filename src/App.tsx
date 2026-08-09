@@ -21,6 +21,7 @@ import { SubjectSelectionModal } from './components/SubjectSelectionModal';
 import { ListPlus } from 'lucide-react';
 import { ExportDropdown } from './components/ExportDropdown';
 import { exportToExcel, exportToCSV, exportToICS, exportToPDF } from './utils/export';
+import { normalizeColorOverrideKey } from './utils/colors';
 
 // Horario Academico Main App Component - Impeccable Design
 export default function App() {
@@ -90,9 +91,14 @@ export default function App() {
   const [showAntecedentes, setShowAntecedentes] = useState<boolean>(() =>
     loadFromStorage<boolean>('showAntecedentes', true)
   );
-  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() =>
-    loadFromStorage<Record<string, string>>('colorOverrides', {})
-  );
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    const raw = loadFromStorage<Record<string, string>>('colorOverrides', {});
+    const migrated: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      migrated[normalizeColorOverrideKey(key)] = value;
+    }
+    return migrated;
+  });
   const [pendingMapping, setPendingMapping] = useState<PendingMappingFile | null>(null);
   const [pendingSheetQueue, setPendingSheetQueue] = useState<File[]>([]);
   const [pendingExcel, setPendingExcel] = useState<{ file: File; sheets: string[] } | null>(null);
@@ -142,7 +148,8 @@ export default function App() {
   }, [useColorfulMode]);
 
   const handleColorChange = (asignatura: string, colorId: string) => {
-    setColorOverrides(prev => ({ ...prev, [asignatura]: colorId }));
+    const key = normalizeColorOverrideKey(asignatura);
+    setColorOverrides(prev => ({ ...prev, [key]: colorId }));
   };
 
   const materiasCompletadasSet = React.useMemo(() => new Set(materiasCompletadas), [materiasCompletadas]);

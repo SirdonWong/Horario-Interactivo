@@ -40,10 +40,26 @@ export default defineConfig(() => {
               if (id.includes('xlsx')) {
                 return 'vendor-xlsx';
               }
-              // jsPDF y html-to-image se cargan de forma dinámica (solo cuando
-              // el usuario exporta a PDF). Aislarlos en chunks propios evita
-              // que engrosen el bundle inicial de la app.
-              if (id.includes('jspdf') || id.includes('html-to-image')) {
+              // jsPDF, html-to-image y sus dependencias transitivas se cargan de forma
+              // dinámica (solo cuando el usuario exporta a PDF). Aislarlos en su propio
+              // chunk evita que engrosen el bundle inicial de la app.
+              const PDF_ECOSYSTEM = [
+                'jspdf',
+                'html-to-image',
+                'html2canvas',
+                'canvg',
+                'dompurify',
+                'pako',
+                'fast-png',
+                'iobuffer',
+                'svg-pathdata',
+                'stackblur-canvas',
+                'rgbcolor',
+                'raf',
+                'performance-now',
+                'core-js',
+              ];
+              if (PDF_ECOSYSTEM.some(pkg => id.includes(pkg))) {
                 return 'vendor-pdf';
               }
               const RADIX_ECOSYSTEM = [
