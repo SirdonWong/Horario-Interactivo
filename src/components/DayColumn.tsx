@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { Activity, DayOfWeek, HOURS, ActivitySchedule } from '../types';
 import { checkOverlap, hasConflict, formatTime, formatWeeklySchedules } from '../utils/time';
@@ -38,6 +38,15 @@ export function DayColumn({
 }: DayColumnProps) {
   const [activeHour, setActiveHour] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedAsignaturas = useMemo(() => {
+    const set = new Set<string>();
+    selectedActivities.forEach(a => {
+      const key = resolveMateriaId(a.asignatura) || a.asignatura.trim().toLowerCase();
+      set.add(key);
+    });
+    return set;
+  }, [selectedActivities]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -106,6 +115,7 @@ export function DayColumn({
           return (
             <div
               key={hour}
+              data-tour="calendar-cell"
               tabIndex={0}
               role="button"
               aria-label={`Ver materias de ${day} a las ${formatTime(hour * 60)}`}
@@ -147,9 +157,11 @@ export function DayColumn({
                   ) : (
                     <div className="space-y-1.5">
                       {available.map(act => {
+                        const actKey = resolveMateriaId(act.asignatura) || act.asignatura.trim().toLowerCase();
                         const isApproved = showAntecedentes && materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
+                        const isSameSubjectSelected = selectedAsignaturas.has(actKey);
                         const selectedSchedules = selectedActivities.flatMap(sa => sa.schedules);
-                        const isConflict = hasConflict(act.schedules, selectedSchedules);
+                        const isConflict = !isSameSubjectSelected && hasConflict(act.schedules, selectedSchedules);
                         const antecedentesPendientes = getPendingPrerequisites(act.asignatura, act.antecedentes, materiasCompletadas);
                         const weeklyScheduleText = formatWeeklySchedules(act.schedules);
 
@@ -160,12 +172,14 @@ export function DayColumn({
                               "p-2.5 rounded-lg text-xs transition-colors border border-[var(--border-subtle)]",
                               isApproved 
                                 ? "opacity-50 bg-black/5 dark:bg-white/5 cursor-not-allowed" 
-                                : isConflict 
-                                  ? "opacity-50 bg-red-500/10 border-red-500/20 cursor-not-allowed" 
-                                  : "hover:bg-[var(--bg-app)] cursor-pointer hover:border-[var(--border-strong)]"
+                                : isSameSubjectSelected
+                                  ? "opacity-50 bg-blue-500/10 border-blue-500/20 cursor-not-allowed"
+                                  : isConflict 
+                                    ? "opacity-50 bg-red-500/10 border-red-500/20 cursor-not-allowed" 
+                                    : "hover:bg-[var(--bg-app)] cursor-pointer hover:border-[var(--border-strong)]"
                             )}
                             onClick={() => {
-                              if (isConflict || isApproved) return;
+                              if (isConflict || isApproved || isSameSubjectSelected) return;
                               onSelectActivity(act);
                               setActiveHour(null);
                             }}
@@ -179,8 +193,9 @@ export function DayColumn({
                             <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)] mt-1.5 pt-1.5 border-t border-[var(--border-subtle)]">
                               <span>Grupo {act.grupo} • {act.profesor}</span>
                               {isApproved && <span className="text-[var(--text-muted)] font-medium">Ya aprobada</span>}
-                              {!isApproved && !isConflict && <span className="text-[var(--color-primary)] font-medium">+ Agregar</span>}
-                              {!isApproved && isConflict && <span className="text-[var(--color-danger)] font-medium">Conflicto</span>}
+                              {!isApproved && isSameSubjectSelected && <span className="text-blue-500 font-medium">Ya seleccionada</span>}
+                              {!isApproved && !isSameSubjectSelected && !isConflict && <span className="text-[var(--color-primary)] font-medium">+ Agregar</span>}
+                              {!isApproved && !isSameSubjectSelected && isConflict && <span className="text-[var(--color-danger)] font-medium">Conflicto</span>}
                             </div>
                             {showAntecedentes && antecedentesPendientes.length > 0 && (
                               <div className="text-[10px] text-amber-500 mt-1 font-medium">
@@ -200,21 +215,21 @@ export function DayColumn({
 
         {/* Selected Activities rendered absolutely */}
         {activitiesForThisDay.map(({ activity, schedule }) => {
-          const calendarStartOffset = 7 * 60;
+          const calendarStartOffset = 7 * 60; // 07:00 AM
           const topMinutes = schedule.timeRange.start - calendarStartOffset;
           const durationMinutes = schedule.timeRange.end - schedule.timeRange.start;
           
-          const ratio = 4 / 60; // 4rem (h-16) per 60 minutes
-          const topRem = topMinutes * ratio; 
-          const heightRem = durationMinutes * ratio;
+          const totalCalendarMinutes = 15 * 60; // 15 horas (07:00 a 21:00)
+          const topPercent = (topMinutes / totalCalendarMinutes) * 100;
+          const heightPercent = (durationMinutes / totalCalendarMinutes) * 100;
 
           return (
             <div
               key={activity.id}
-              className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] px-1"
+              className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[100] px-1"
               style={{
-                top: `${topRem}rem`,
-                height: `${heightRem}rem`,
+                top: `${topPercent}%`,
+                height: `${heightPercent}%`,
               }}
             >
               <ActivityCard

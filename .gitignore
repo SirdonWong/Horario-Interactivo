@@ -14,3 +14,5 @@ coverage/
 .impeccable/
 .agents/
 scratch/
+.vercel
+.env*

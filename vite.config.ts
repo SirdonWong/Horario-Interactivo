@@ -2,14 +2,26 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      visualizer({
+        filename: 'scratch/bundle-report.html',
+        gzipSize: true,
+        brotliSize: true,
+      }),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'fs': path.resolve(__dirname, 'src/utils/dummy.ts'),
+        'stream': path.resolve(__dirname, 'src/utils/dummy.ts'),
+        'crypto': path.resolve(__dirname, 'src/utils/dummy.ts'),
       },
     },
     server: {
@@ -20,6 +32,7 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -27,7 +40,17 @@ export default defineConfig(() => {
               if (id.includes('xlsx')) {
                 return 'vendor-xlsx';
               }
-              if (id.includes('@radix-ui')) {
+              const RADIX_ECOSYSTEM = [
+                '@radix-ui',
+                '@floating-ui',
+                'react-remove-scroll',
+                'react-style-singleton',
+                'use-callback-ref',
+                'use-sidecar',
+                'aria-hidden',
+                'get-nonce',
+              ];
+              if (RADIX_ECOSYSTEM.some(pkg => id.includes(pkg))) {
                 return; // no lo agrupes en "vendor" — deja que Rollup lo 
                         // separe automáticamente siguiendo el grafo del 
                         // import() dinámico de ColumnMappingDialog

@@ -30,10 +30,10 @@ export function Calendar({
 }: CalendarProps) {
   
   return (
-    <div className="h-full flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-sm)]">
+    <div className="h-full print-auto-height flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-sm)]">
       {/* Scrollable Container for Mobile */}
       <div 
-        className="flex-1 overflow-auto relative bg-[var(--bg-surface)]"
+        className="flex-1 overflow-auto relative bg-[var(--bg-surface)] print-auto-height"
         onScroll={onScroll}
       >
         <div className="min-w-[720px] h-full flex flex-col bg-[var(--bg-surface)]" id="calendar-export-area">

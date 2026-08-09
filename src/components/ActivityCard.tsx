@@ -64,6 +64,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       aria-expanded={showTooltip}
       className={cn(
         "relative h-full w-full rounded-md p-1.5 text-xs group transition-all duration-200 border-l-3 border-[var(--color-primary)] shadow-sm cursor-pointer flex flex-col border border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] select-none [-webkit-touch-callout:none]",
+        (showTooltip || showColorPicker) && "active-card",
         !effectiveColorId && "bg-[var(--bg-app)] text-[var(--text-main)]"
       )}
       style={effectiveColorId ? {
@@ -89,18 +90,19 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       }}
     >
 
-      <div className="flex justify-between items-start">
-        <h4 className="text-[10px] font-semibold leading-tight truncate pr-1">
+      <div className="flex justify-between items-start print:flex-col print:items-start">
+        <h4 className="text-[10px] print:text-[8px] print:break-words print:hyphens-auto font-semibold leading-tight truncate print-truncate-none pr-1">
           {activity.asignatura}
         </h4>
-        <span className="text-[9px] font-medium text-[var(--color-primary)] shrink-0">G{activity.grupo.padStart(2, '0')}</span>
+        <span className="text-[9px] print:text-[8px] font-medium text-[var(--color-primary)] shrink-0 print:mt-0.5">G{activity.grupo.padStart(2, '0')}</span>
       </div>
-      <p className="text-[9px] mt-1 leading-tight truncate text-[var(--text-muted)]">
+      <p className="text-[9px] print:text-[8px] print:break-words mt-1 leading-tight truncate print-truncate-none text-[var(--text-muted)]">
         {activity.sala && `${activity.sala} • `}{activity.profesor}
       </p>
       
       {/* Color picker trigger */}
       <button
+        data-tour="color-picker-trigger"
         ref={triggerRef}
         onClick={(e) => {
           e.stopPropagation();

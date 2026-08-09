@@ -61,7 +61,8 @@ export function Uploader({ onDataLoaded, onMappingNeeded, onExcelSheetsNeeded, o
     <div className="flex items-center gap-2 sm:gap-4">
       <label
         htmlFor="csv-file-input"
-        className="flex items-center px-3 py-2.5 sm:px-3.5 sm:py-1 bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg text-xs sm:text-xs font-medium border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all shadow-sm cursor-pointer select-none"
+        data-tour="uploader-button"
+        className="flex items-center justify-center p-2 sm:px-3.5 sm:py-1 bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg text-xs sm:text-xs font-medium border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all shadow-sm cursor-pointer select-none"
       >
         <input
           id="csv-file-input"

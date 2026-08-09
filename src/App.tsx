@@ -8,7 +8,8 @@ const ColumnMappingDialog = React.lazy(() =>
   )
 );
 import { ExcelSheetDialog } from './components/ExcelSheetDialog';
-import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette } from 'lucide-react';
+import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle } from 'lucide-react';
+import { TourOrchestrator } from './components/TourOrchestrator';
 
 import { loadFromStorage, saveToStorage } from './utils/storage';
 import { PrerequisiteChecklist } from './components/PrerequisiteChecklist';
@@ -18,6 +19,9 @@ import { convertSheetToCSV } from './utils/excel';
 import { AnimatePresence, motion } from 'motion/react';
 import { SubjectSelectionModal } from './components/SubjectSelectionModal';
 import { ListPlus } from 'lucide-react';
+import { ExportDropdown } from './components/ExportDropdown';
+import { exportToExcel, exportToCSV } from './utils/export';
+import { PdfExportDialog } from './components/PdfExportDialog';
 
 // Horario Academico Main App Component - Impeccable Design
 export default function App() {
@@ -40,7 +44,10 @@ export default function App() {
   } | null>(null);
 
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [includePdfSubjectList, setIncludePdfSubjectList] = useState(true);
   const [isFabExpanded, setIsFabExpanded] = useState(true);
+  const [manualTriggerSignal, setManualTriggerSignal] = useState(0);
   const lastScrollY = React.useRef(0);
 
   const handleCalendarScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -343,20 +350,87 @@ export default function App() {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (selectedActivities.length === 0) {
+      setConfirmState({
+        isOpen: true,
+        title: 'Horario sin asignaturas',
+        message: 'No has agregado ninguna asignatura al horario. ¿Deseas exportar la plantilla vacía a Excel?',
+        variant: 'info',
+        onConfirm: async () => {
+          setConfirmState(null);
+          await exportToExcel(selectedActivities);
+        },
+      });
+      return;
+    }
+    await exportToExcel(selectedActivities);
+  };
+
+  const handleExportCsvMaterias = () => {
+    if (selectedActivities.length === 0) {
+      setConfirmState({
+        isOpen: true,
+        title: 'Horario sin asignaturas',
+        message: 'No has agregado ninguna asignatura al horario. ¿Deseas exportar la lista de materias vacía?',
+        variant: 'info',
+        onConfirm: () => {
+          setConfirmState(null);
+          exportToCSV(selectedActivities, 'materias');
+        },
+      });
+      return;
+    }
+    exportToCSV(selectedActivities, 'materias');
+  };
+
+  const handleExportCsvAgenda = () => {
+    if (selectedActivities.length === 0) {
+      setConfirmState({
+        isOpen: true,
+        title: 'Horario sin asignaturas',
+        message: 'No has agregado ninguna asignatura al horario. ¿Deseas exportar la agenda vacía?',
+        variant: 'info',
+        onConfirm: () => {
+          setConfirmState(null);
+          exportToCSV(selectedActivities, 'agenda');
+        },
+      });
+      return;
+    }
+    exportToCSV(selectedActivities, 'agenda');
+  };
+
+  const handleTriggerPrint = () => {
+    setIsPdfDialogOpen(false);
+    // Un pequeño timeout permite que el modal se cierre antes de invocar la impresión
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
   const totalCreditos = selectedActivities.reduce((acc, curr) => {
     const match = curr.creditos.match(/\d+/);
     return acc + (match ? parseInt(match[0], 10) : 0);
   }, 0);
 
+  // Derived: any modal open (for TourOrchestrator)
+  const anyModalOpen =
+    pendingMapping !== null ||
+    pendingExcel !== null ||
+    isPrerequisiteModalOpen ||
+    confirmState !== null ||
+    isSubjectModalOpen;
+
   return (
     <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-2 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 z-20 shadow-[var(--shadow-sm)]">
-        <div className="flex items-center space-x-1 sm:space-x-2.5">
+      <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-2 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 z-[85] shadow-[var(--shadow-sm)]">
+        <div className="flex items-center space-x-1 sm:space-x-2.5 min-w-0 pr-1 sm:pr-2">
           {/* Mobile Sidebar Toggle Button */}
           <button
             onClick={() => setIsMobileSidebarOpen(prev => !prev)}
-            className="p-2.5 sm:p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all"
+            className="p-2 sm:p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all shrink-0"
             aria-label="Abrir panel de opciones"
             title="Panel de opciones"
           >
@@ -365,7 +439,7 @@ export default function App() {
 
           <img src="/favicon.svg" alt="Logo" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 select-none" />
 
-          <div>
+          <div className="min-w-0">
             <h1 
               className="text-base sm:text-lg font-bold italic tracking-tight text-[var(--text-main)] leading-none truncate"
               style={{ fontFamily: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" }}
@@ -379,23 +453,25 @@ export default function App() {
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-3">
-          {/* Antecedentes Checkbox Toggle (Hidden on very small screens, visible in drawer) */}
-          <label className="hidden lg:flex items-center space-x-2 text-xs font-medium text-[var(--text-main)] cursor-pointer px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:border-[var(--border-strong)] transition-all select-none">
-            <input
-              type="checkbox"
-              checked={showAntecedentes}
-              onChange={(e) => setShowAntecedentes(e.target.checked)}
-              className="w-3.5 h-3.5 rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
-            />
-            <span>
-              Validar Prerrequisitos: <span className={showAntecedentes ? "text-[var(--color-primary)] font-semibold" : "text-[var(--text-muted)]"}>{showAntecedentes ? "ON" : "OFF"}</span>
-            </span>
-          </label>
+          {/* Antecedentes Pill Toggle (Hidden on very small screens, visible in drawer) */}
+          <button
+            data-tour="prereq-toggle"
+            onClick={() => setShowAntecedentes(prev => !prev)}
+            className={`hidden lg:flex items-center space-x-2 text-xs font-medium cursor-pointer px-3 py-1.5 rounded-lg border transition-all select-none ${
+              showAntecedentes
+                ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                : 'border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]'
+            }`}
+            aria-pressed={showAntecedentes}
+            title="Validar Prerrequisitos"
+          >
+            <span>Validar Prerrequisitos</span>
+          </button>
 
           {/* Colorful Mode Toggle Button */}
           <button
             onClick={() => setUseColorfulMode(prev => !prev)}
-            className={`p-2.5 sm:p-1 rounded-lg border transition-all flex items-center justify-center ${
+            className={`p-2 sm:p-1 rounded-lg border transition-all flex items-center justify-center ${
               useColorfulMode 
                 ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]" 
                 : "border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]"
@@ -406,10 +482,20 @@ export default function App() {
             <Palette className={`w-5 h-5 sm:w-4 sm:h-4 ${useColorfulMode ? "opacity-100" : "opacity-70"}`} />
           </button>
 
+          {/* Tutorial Help Button (desktop only) */}
+          <button
+            onClick={() => setManualTriggerSignal(prev => prev + 1)}
+            className="p-2 sm:p-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
+            title="Ver tutorial"
+            aria-label="Ver tutorial"
+          >
+            <HelpCircle className="w-5 h-5 sm:w-4 sm:h-4" />
+          </button>
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-2.5 sm:p-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
+            className="p-2 sm:p-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
             title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
             aria-label="Toggle theme"
           >
@@ -425,25 +511,16 @@ export default function App() {
             onClearError={() => setCsvUploadError(null)}
           />
 
-          {/* Export PNG */}
+          {/* Export Dropdown */}
           {availableActivities.length > 0 && (
-            <button
-              onClick={handleExport}
-              disabled={isExporting}
-              className="flex items-center px-3 py-2.5 sm:px-3.5 sm:py-1 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="w-5 h-5 sm:w-3.5 sm:h-3.5 sm:mr-1.5 animate-spin" />
-                  <span className="hidden sm:inline">Generando...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-5 h-5 sm:w-3.5 sm:h-3.5 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Exportar PNG</span>
-                </>
-              )}
-            </button>
+            <ExportDropdown
+              onExportPng={handleExport}
+              onExportExcel={handleExportExcel}
+              onExportCsvMaterias={handleExportCsvMaterias}
+              onExportCsvAgenda={handleExportCsvAgenda}
+              onExportPdf={() => setIsPdfDialogOpen(true)}
+              isExportingPng={isExporting}
+            />
           )}
         </div>
       </header>
@@ -477,29 +554,42 @@ export default function App() {
             </button>
           </div>
 
-          {/* Mobile Checkboxes inside Drawer */}
+          {/* Mobile Pill Toggles inside Drawer */}
           <div className="lg:hidden pb-3 border-b border-[var(--border-subtle)] space-y-2">
-            <label className="flex items-center justify-between text-xs font-medium text-[var(--text-main)] cursor-pointer p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] select-none">
+            <button
+              data-tour="prereq-toggle"
+              onClick={() => setShowAntecedentes(prev => !prev)}
+              className={`w-full flex items-center space-x-2 text-xs font-medium cursor-pointer p-2.5 rounded-lg border transition-all select-none ${
+                showAntecedentes
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]'
+              }`}
+              aria-pressed={showAntecedentes}
+            >
               <span>Validar Prerrequisitos</span>
-              <input
-                type="checkbox"
-                checked={showAntecedentes}
-                onChange={(e) => setShowAntecedentes(e.target.checked)}
-                className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
-              />
-            </label>
-            <label className="flex items-center justify-between text-xs font-medium text-[var(--text-main)] cursor-pointer p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] select-none">
-              <span className="flex items-center space-x-2">
-                <Palette className={`w-3.5 h-3.5 ${useColorfulMode ? "text-[var(--color-primary)]" : "text-[var(--text-muted)]"}`} />
-                <span>Modo Colorido</span>
-              </span>
-              <input
-                type="checkbox"
-                checked={useColorfulMode}
-                onChange={(e) => setUseColorfulMode(e.target.checked)}
-                className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
-              />
-            </label>
+            </button>
+            <button
+              onClick={() => setUseColorfulMode(prev => !prev)}
+              className={`w-full flex items-center space-x-2 text-xs font-medium cursor-pointer p-2.5 rounded-lg border transition-all select-none ${
+                useColorfulMode
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]'
+              }`}
+              aria-pressed={useColorfulMode}
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>Modo Colorido</span>
+            </button>
+            {/* Ver tutorial button (mobile drawer) */}
+            <button
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                setManualTriggerSignal(prev => prev + 1);
+              }}
+              className="w-full text-left text-xs font-medium text-[var(--color-primary)] p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:border-[var(--border-strong)] transition-all"
+            >
+              Ver tutorial de nuevo
+            </button>
           </div>
 
           {/* Summary Cards */}
@@ -716,10 +806,21 @@ export default function App() {
         />
       )}
 
+      {/* Guided Tour Orchestrator */}
+      <TourOrchestrator
+        hasAvailableActivities={availableActivities.length > 0}
+        hasSelectedActivities={selectedActivities.length > 0}
+        anyModalOpen={anyModalOpen}
+        manualTriggerSignal={manualTriggerSignal}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+      />
+
       {/* Floating Action Button (FAB) for Quick Selection */}
       <AnimatePresence>
         {availableActivities.length > 0 && (
           <motion.button
+            data-tour="fab-quick-select"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
@@ -759,6 +860,54 @@ export default function App() {
         onSelectActivity={handleSelectActivity}
         onRemoveActivity={handleRemoveActivity}
       />
+
+      <AnimatePresence>
+        {isPdfDialogOpen && (
+          <PdfExportDialog
+            includeSubjectList={includePdfSubjectList}
+            onIncludeSubjectListChange={setIncludePdfSubjectList}
+            onConfirm={handleTriggerPrint}
+            onCancel={() => setIsPdfDialogOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Print-Only Subjects Table */}
+      {includePdfSubjectList && selectedActivities.length > 0 && (
+        <div className="hidden print-only-subjects p-8 bg-white">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-slate-900 border-b pb-2">Resumen del Horario y Asignaturas Inscritas</h2>
+            <div className="flex gap-6 mt-3 text-sm font-medium text-slate-700">
+              <p><span className="font-bold text-slate-900">{totalCreditos}</span> Créditos Totales</p>
+              <p><span className="font-bold text-slate-900">{selectedActivities.length}</span> Materias</p>
+            </div>
+          </div>
+          <table className="w-full text-left border-collapse text-sm text-slate-700">
+            <thead>
+              <tr className="border-b-2 border-slate-300">
+                <th className="py-2 px-3 font-semibold">Asignatura</th>
+                <th className="py-2 px-3 font-semibold">Grupo</th>
+                <th className="py-2 px-3 font-semibold">Créditos</th>
+                <th className="py-2 px-3 font-semibold">Profesor</th>
+                <th className="py-2 px-3 font-semibold">Horario</th>
+                <th className="py-2 px-3 font-semibold">Sala</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedActivities.map((act) => (
+                <tr key={act.id} className="border-b border-slate-200">
+                  <td className="py-2 px-3 font-medium">{act.asignatura}</td>
+                  <td className="py-2 px-3">{act.grupo}</td>
+                  <td className="py-2 px-3">{act.creditos || '-'}</td>
+                  <td className="py-2 px-3">{act.profesor || '-'}</td>
+                  <td className="py-2 px-3">{act.horarioTexto || '-'}</td>
+                  <td className="py-2 px-3">{act.sala || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

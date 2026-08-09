@@ -5,13 +5,13 @@
 
 // We don't import xlsx statically at the top level to avoid bundling it
 // on the main chunk. It will be loaded on demand.
-type WorkBook = import('xlsx').WorkBook;
+type WorkBook = import('xlsx-js-style').WorkBook;
 
 /**
  * Dynamically imports xlsx and reads the workbook from a File.
  */
 async function loadWorkbook(file: File): Promise<WorkBook> {
-  const XLSX = await import('xlsx');
+  const XLSX = await import('xlsx-js-style');
   const buffer = await file.arrayBuffer();
   // Read the workbook. We don't need cell values just to get sheet names, 
   // but we do need them later for CSV conversion.
@@ -41,7 +41,7 @@ export async function readExcelSheets(file: File): Promise<string[]> {
  * This generated CSV file can then be fed into the existing CSV parsing pipeline.
  */
 export async function convertSheetToCSV(file: File, sheetName: string): Promise<File> {
-  const XLSX = await import('xlsx');
+  const XLSX = await import('xlsx-js-style');
   const workbook = await loadWorkbook(file);
   
   const sheet = workbook.Sheets[sheetName];
