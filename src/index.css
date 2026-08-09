@@ -125,106 +125,135 @@
   background: var(--text-muted);
 }
 
-/* ---------------------------------- */
-/* Print Styles for PDF Export        */
-/* ---------------------------------- */
+/* ── ESTILOS DE IMPRESIÓN (SISTEMA NATIVO) ── */
 @media print {
-  /* Forzar colores exactos para mantener el tema y swatches */
+
+  /* ─ Configuración de página ─ */
+  @page {
+    margin: 5mm;
+    size: landscape;
+  }
+
+  /* ─ Anular el clipping de wrappers: dejar que el contenido fluya ─ */
+  html, body, #root, .print-app-root {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    display: block !important;
+  }
+
+  /* Ocultar toda la UI por defecto */
+  body * {
+    visibility: hidden;
+  }
+
+  /* ─ Wrapper intermedio y main de App.tsx ─ */
+  main,
+  .print-main-wrapper {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* ─ Scroll interno y contenedor outer del Calendar ─ */
+  .print-scroll-container {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-calendar-outer {
+    overflow: visible !important;
+    height: auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* ─ 1. CALENDARIO — flujo normal, visible, sin position absolute ─ */
+  #calendar-export-area,
+  #calendar-export-area * {
+    visibility: visible;
+  }
+
+  #calendar-export-area {
+    display: block !important;
+    position: static !important;   /* flujo normal, no absoluto */
+    width: 100% !important;
+    min-width: 720px !important;   /* fuerza ancho de escritorio en móvil */
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    padding: 0 !important;          /* 0 padding para aprovechar al máximo la página 1 */
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    page-break-inside: auto;
+  }
+
+  /* Cabecera de días: sticky → static para que no flote */
+  #calendar-export-area .sticky {
+    position: static !important;
+    background: white !important;
+  }
+
+  /* ─ 2. TABLA DE MATERIAS — página nueva, flujo normal ─ */
+  .print-only-subjects,
+  .print-only-subjects * {
+    visibility: visible;
+  }
+
+  .print-only-subjects {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    break-before: page;           /* siempre empieza en hoja nueva */
+    page-break-before: always;   /* fallback para WebKit */
+    margin: 0 !important;
+    padding: 5mm !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ─ Forzar colores e imprimir fondos (necesario en WebKit/Chrome) ─ */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
-  /* Mantener el color de fondo del tema en toda la página y dejar un margen mínimo */
-  html, body {
-    background-color: var(--bg-app) !important;
-    color: var(--text-main) !important;
-    padding: 2mm !important;
-  }
 
-  /* Ocultar elementos de UI interactivos */
-  .print-hidden,
-  aside,
-  button,
+  /* ─ Ocultar explícitamente elementos que jamás deben imprimirse ─ */
   header,
+  footer,
+  aside,
   nav,
-  .sidebar,
-  .toast,
-  .modal-overlay,
-  [role="dialog"],
-  [role="tooltip"] {
+  [data-tour],
+  [aria-label="Toggle theme"],
+  [aria-label="Ver tutorial"],
+  [aria-label="Toggle colorful mode"] {
     display: none !important;
-  }
-
-  /* Expandir contenedor principal y resetear límites de altura para evitar cortes */
-  #root, .print-container, .h-screen, .min-h-screen {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-  
-  /* Solo forzar auto-height en los contenedores del calendario que impiden el salto de página, NO usar .h-full global para no arruinar las tarjetas de actividad */
-  #calendar-export-area,
-  #calendar-export-area > div,
-  .print-auto-height {
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Permitir que el calendario se comprima al ancho del PDF para evitar paginación horizontal (cortes) */
-  #calendar-export-area {
-    min-width: 0 !important;
-    width: 100% !important;
-  }
-
-  /* Desactivar sticky en impresión, ya que causa solapamiento y duplicación de columnas al paginar */
-  .sticky {
-    position: relative !important;
-  }
-
-  /* Resetear desbordamientos para que el calendario baje de página */
-  .overflow-hidden, .overflow-auto, .overflow-y-auto, .overflow-x-auto {
-    overflow: visible !important;
-  }
-
-  /* Si hay barras de scroll en contenedores, ocultarlas */
-  ::-webkit-scrollbar {
-    display: none !important;
-  }
-
-  /* Asegurar que las tarjetas de materia no se corten por la mitad */
-  .activity-card-print {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* Tabla de resumen de asignaturas */
-  .print-only-subjects {
-    display: block !important;
-    margin-top: 2rem !important;
-    break-before: page !important;
-    page-break-before: always !important;
-  }
-
-  /* Evitar saltos de página huérfanos en filas de la tabla */
-  .print-only-subjects tr {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* Desactivar truncado para mostrar nombres completos */
-  .print-truncate-none {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-  }
-
-  @page {
-    margin: 0;
-    /* Al establecer el margen de página en 0, la mayoría de los navegadores suprimen automáticamente sus encabezados y pies de página predeterminados (URL, fechas, página x/y) */
+    visibility: hidden !important;
   }
 }
+
+/* ── ESTILOS DE EXPORTACIÓN (CAPTURA PNG / PDF) ── */
+.exporting-mode .truncate {
+  white-space: normal !important;
+  text-overflow: clip !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.exporting-mode [data-tour="color-picker-trigger"],
+.exporting-mode button[title="Quitar actividad"] {
+  display: none !important;
+}
+

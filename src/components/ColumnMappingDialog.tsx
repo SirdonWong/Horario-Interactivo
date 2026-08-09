@@ -94,6 +94,8 @@ interface ColumnMappingDialogProps {
   sampleRows: string[][];
   initialMapping: ColumnMapping;
   fileName: string;
+  /** Si viene de una hoja de Excel, el nombre de la hoja para mostrarlo en el header */
+  sheetName?: string;
   onConfirm: (mapping: ColumnMapping) => void;
   onCancel: () => void;
 }
@@ -103,6 +105,7 @@ export function ColumnMappingDialog({
   sampleRows,
   initialMapping,
   fileName,
+  sheetName,
   onConfirm,
   onCancel,
 }: ColumnMappingDialogProps) {
@@ -206,9 +209,15 @@ export function ColumnMappingDialog({
               <h2 id="mapping-dialog-title" className="text-sm font-semibold leading-tight">
                 Confirma las columnas de "{fileName}"
               </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Revisa el mapeo antes de continuar
-              </p>
+              {sheetName ? (
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Hoja: <span className="font-medium text-[var(--text-main)]">{sheetName}</span>
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Revisa el mapeo antes de continuar
+                </p>
+              )}
             </div>
           </div>
           <button

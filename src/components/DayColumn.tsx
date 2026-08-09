@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus } from 'lucide-react';
-import { Activity, DayOfWeek, HOURS, ActivitySchedule } from '../types';
+import React, { useMemo } from 'react';
+import { Plus, X } from 'lucide-react';
+import { Activity, DayOfWeek, HOURS } from '../types';
 import { checkOverlap, hasConflict, formatTime, formatWeeklySchedules } from '../utils/time';
 import { ActivityCard } from './ActivityCard';
 import { cn } from '../lib/utils';
@@ -20,6 +20,10 @@ interface DayColumnProps {
   onColorChange: (asignatura: string, colorId: string) => void;
   useColorfulMode: boolean;
   columnIndex?: number;
+  activeCell: { day: DayOfWeek; hour: number } | null;
+  onCellToggle: (day: DayOfWeek, hour: number, e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => void;
+  onCloseCell: () => void;
+  dropdownRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function DayColumn({
@@ -34,10 +38,12 @@ export function DayColumn({
   colorOverrides,
   onColorChange,
   useColorfulMode,
-  columnIndex = 3
+  columnIndex = 3,
+  activeCell,
+  onCellToggle,
+  onCloseCell,
+  dropdownRef,
 }: DayColumnProps) {
-  const [activeHour, setActiveHour] = useState<number | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedAsignaturas = useMemo(() => {
     const set = new Set<string>();
@@ -48,39 +54,12 @@ export function DayColumn({
     return set;
   }, [selectedActivities]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setActiveHour(null);
-      }
-    }
-    if (activeHour !== null) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [activeHour]);
-
   // Find activities mapped to this day that are selected
   const activitiesForThisDay = selectedActivities.flatMap(act => {
     return act.schedules
       .filter(s => s.day === day)
       .map(schedule => ({ activity: act, schedule }));
   });
-
-  const handleCellClick = (hour: number, e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
-    if (activeHour === hour) {
-      setActiveHour(null);
-    } else {
-      setActiveHour(hour);
-      if (e?.currentTarget) {
-        // Scroll the column into view horizontally to ensure dropdown fits on mobile screens
-        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
-    }
-  };
 
   const getDropdownPositionClass = () => {
     if (columnIndex === 0) return "left-0"; // Lunes
@@ -111,6 +90,7 @@ export function DayColumn({
         {HOURS.map(hour => {
           const available = getAvailableForHour(hour);
           const hasOptions = available.length > 0;
+          const isCellActive = activeCell?.day === day && activeCell?.hour === hour;
 
           return (
             <div
@@ -119,21 +99,21 @@ export function DayColumn({
               tabIndex={0}
               role="button"
               aria-label={`Ver materias de ${day} a las ${formatTime(hour * 60)}`}
-              aria-expanded={activeHour === hour}
+              aria-expanded={isCellActive}
               className={cn(
                 "h-16 relative group cursor-pointer transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]",
-                activeHour === hour ? "bg-[var(--color-primary-light)] z-[65]" : "hover:bg-[var(--bg-surface-hover)]"
+                isCellActive ? "bg-[var(--color-primary-light)] z-[65]" : "hover:bg-[var(--bg-surface-hover)]"
               )}
-              onClick={(e) => handleCellClick(hour, e)}
+              onClick={(e) => onCellToggle(day, hour, e)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  handleCellClick(hour, e);
+                  onCellToggle(day, hour, e);
                 }
               }}
             >
 
-              {hasOptions && activeHour !== hour && (
+              {hasOptions && !isCellActive && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white shadow-sm">
                     <Plus className="w-3 h-3" />
@@ -142,20 +122,34 @@ export function DayColumn({
               )}
 
               {/* Dropdown menu */}
-              {activeHour === hour && (
+              {isCellActive && (
                 <div 
                   ref={dropdownRef}
-                  className={`absolute top-10 w-[85vw] max-w-[280px] sm:w-72 sm:max-w-none bg-[var(--bg-surface)] shadow-lg border border-[var(--border-strong)] rounded-lg p-2 sm:p-2.5 z-[65] max-h-[320px] overflow-y-auto ${getDropdownPositionClass()}`}
+                  className={`absolute ${hour >= 17 ? 'bottom-9' : 'top-9'} w-[75vw] sm:w-80 bg-[var(--bg-surface)] shadow-xl border border-[var(--border-strong)] rounded-lg p-1.5 sm:p-2 z-[65] max-h-[280px] sm:max-h-[230px] overflow-y-auto ${getDropdownPositionClass()}`}
                   onClick={(e) => e.stopPropagation()} 
                 >
-                  <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2 px-1">
-                    Materias disponibles {day} {formatTime(hour * 60)}
-                  </p>
+                  <div className="flex items-center justify-between mb-1.5 px-0.5 pb-1 border-b border-[var(--border-subtle)]">
+                    <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight truncate">
+                      {day} {formatTime(hour * 60)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseCell();
+                      }}
+                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-app)] transition-colors focus:outline-none shrink-0"
+                      title="Cerrar"
+                      aria-label="Cerrar"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                   
                   {available.length === 0 ? (
-                    <div className="p-3 text-xs text-[var(--text-muted)] text-center">No hay asignaturas disponibles</div>
+                    <div className="p-2 text-[11px] text-[var(--text-muted)] text-center">No hay asignaturas disponibles</div>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       {available.map(act => {
                         const actKey = resolveMateriaId(act.asignatura) || act.asignatura.trim().toLowerCase();
                         const isApproved = showAntecedentes && materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
@@ -169,7 +163,7 @@ export function DayColumn({
                           <div
                             key={act.id}
                             className={cn(
-                              "p-2.5 rounded-lg text-xs transition-colors border border-[var(--border-subtle)]",
+                              "p-1.5 rounded-md text-[11px] transition-colors border border-[var(--border-subtle)] leading-tight",
                               isApproved 
                                 ? "opacity-50 bg-black/5 dark:bg-white/5 cursor-not-allowed" 
                                 : isSameSubjectSelected
@@ -178,28 +172,29 @@ export function DayColumn({
                                     ? "opacity-50 bg-red-500/10 border-red-500/20 cursor-not-allowed" 
                                     : "hover:bg-[var(--bg-app)] cursor-pointer hover:border-[var(--border-strong)]"
                             )}
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (isConflict || isApproved || isSameSubjectSelected) return;
                               onSelectActivity(act);
-                              setActiveHour(null);
+                              onCloseCell();
                             }}
                           >
-                            <div className="font-semibold text-[var(--text-main)]">{act.asignatura}</div>
+                            <div className="font-semibold text-[var(--text-main)] leading-snug">{act.asignatura}</div>
                             {weeklyScheduleText && (
-                              <div className="text-[10px] font-medium text-[var(--color-primary)] mt-0.5">
+                              <div className="text-[9px] font-medium text-[var(--color-primary)] mt-0.5">
                                 {weeklyScheduleText}
                               </div>
                             )}
-                            <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)] mt-1.5 pt-1.5 border-t border-[var(--border-subtle)]">
-                              <span>Grupo {act.grupo} • {act.profesor}</span>
-                              {isApproved && <span className="text-[var(--text-muted)] font-medium">Ya aprobada</span>}
-                              {!isApproved && isSameSubjectSelected && <span className="text-blue-500 font-medium">Ya seleccionada</span>}
-                              {!isApproved && !isSameSubjectSelected && !isConflict && <span className="text-[var(--color-primary)] font-medium">+ Agregar</span>}
-                              {!isApproved && !isSameSubjectSelected && isConflict && <span className="text-[var(--color-danger)] font-medium">Conflicto</span>}
+                            <div className="flex justify-between items-center text-[9px] text-[var(--text-muted)] mt-1 pt-1 border-t border-[var(--border-subtle)]">
+                              <span className="truncate max-w-[110px]">G. {act.grupo} • {act.profesor}</span>
+                              {isApproved && <span className="text-[var(--text-muted)] font-medium shrink-0">Aprobada</span>}
+                              {!isApproved && isSameSubjectSelected && <span className="text-blue-500 font-medium shrink-0">Seleccionada</span>}
+                              {!isApproved && !isSameSubjectSelected && !isConflict && <span className="text-[var(--color-primary)] font-medium shrink-0">+ Agregar</span>}
+                              {!isApproved && !isSameSubjectSelected && isConflict && <span className="text-[var(--color-danger)] font-medium shrink-0">Conflicto</span>}
                             </div>
                             {showAntecedentes && antecedentesPendientes.length > 0 && (
-                              <div className="text-[10px] text-amber-500 mt-1 font-medium">
-                                ⚠ Antecedente pendiente: {antecedentesPendientes.join(', ')}
+                              <div className="text-[9px] text-amber-500 mt-0.5 font-medium leading-tight">
+                                ⚠ Req: {antecedentesPendientes.join(', ')}
                               </div>
                             )}
                           </div>

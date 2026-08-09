@@ -23,6 +23,8 @@ export interface PendingMappingFile {
   file: File;
   preview: CSVPreview;
   initialMapping: ColumnMapping;
+  /** Nombre de la hoja de Excel que originó este archivo virtual (si aplica) */
+  sheetName?: string;
 }
 
 export function Uploader({ onDataLoaded, onMappingNeeded, onExcelSheetsNeeded, onError, onClearError }: UploaderProps) {

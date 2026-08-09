@@ -7,28 +7,35 @@ import {
   FileSpreadsheet,
   FileText,
   Calendar,
+  CalendarPlus,
   Loader2,
+  Printer,
 } from 'lucide-react';
 
 interface ExportDropdownProps {
   onExportPng: () => Promise<void> | void;
   onExportExcel: () => Promise<void> | void;
+  onExportPdf: () => Promise<void> | void;
   onExportCsvMaterias: () => void;
   onExportCsvAgenda: () => void;
-  onExportPdf: () => void;
+  onExportIcs: () => void;
+  onPrint?: () => void;
   isExportingPng?: boolean;
 }
 
 export function ExportDropdown({
   onExportPng,
   onExportExcel,
+  onExportPdf,
   onExportCsvMaterias,
   onExportCsvAgenda,
-  onExportPdf,
+  onExportIcs,
+  onPrint,
   isExportingPng = false,
 }: ExportDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Cerrar al hacer clic fuera del componente
@@ -54,21 +61,31 @@ export function ExportDropdown({
     };
   }, [isOpen]);
 
-  const handleAction = async (action: () => Promise<void> | void, isAsyncExcel = false) => {
+  const handleAction = async (
+    action: () => Promise<void> | void,
+    asyncKind?: 'excel' | 'pdf'
+  ) => {
     setIsOpen(false);
-    if (isAsyncExcel) {
+    if (asyncKind === 'excel') {
       setIsExportingExcel(true);
       try {
         await action();
       } finally {
         setIsExportingExcel(false);
       }
+    } else if (asyncKind === 'pdf') {
+      setIsExportingPdf(true);
+      try {
+        await action();
+      } finally {
+        setIsExportingPdf(false);
+      }
     } else {
       await action();
     }
   };
 
-  const isBusy = isExportingPng || isExportingExcel;
+  const isBusy = isExportingPng || isExportingExcel || isExportingPdf;
   return (
     <div className="relative inline-block text-left shrink-0" ref={containerRef}>
       <button
@@ -111,15 +128,30 @@ export function ExportDropdown({
 
             <button
               type="button"
-              onClick={() => handleAction(onExportPdf)}
+              onClick={() => handleAction(onExportPdf, 'pdf')}
               className="w-full text-left px-3 py-2 text-xs flex items-start gap-2.5 hover:bg-[var(--border-subtle)]/30 transition-colors text-[var(--text-main)]"
             >
               <FileText className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               <div>
                 <div className="font-medium">Documento PDF</div>
-                <div className="text-[11px] text-[var(--text-muted)]">Impresión vectorial o guardar como PDF</div>
+                <div className="text-[11px] text-[var(--text-muted)]">Descarga directa, 2 páginas (calendario + materias)</div>
               </div>
             </button>
+
+            {/* Opción Imprimir */}
+            {onPrint && (
+              <button
+                type="button"
+                onClick={() => handleAction(onPrint)}
+                className="w-full text-left px-3 py-2 text-xs flex items-start gap-2.5 hover:bg-[var(--border-subtle)]/30 transition-colors text-[var(--text-main)]"
+              >
+                <Printer className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-medium">Imprimir</div>
+                  <div className="text-[11px] text-[var(--text-muted)]">O enviar a impresora nativa (Ctrl+P)</div>
+                </div>
+              </button>
+            )}
 
             {/* Opción PNG */}
             <button
@@ -137,13 +169,26 @@ export function ExportDropdown({
             {/* Opción Excel */}
             <button
               type="button"
-              onClick={() => handleAction(onExportExcel, true)}
+              onClick={() => handleAction(onExportExcel, 'excel')}
               className="w-full text-left px-3 py-2 text-xs flex items-start gap-2.5 hover:bg-[var(--border-subtle)]/30 transition-colors text-[var(--text-main)]"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
               <div>
                 <div className="font-medium">Excel (.xlsx)</div>
                 <div className="text-[11px] text-[var(--text-muted)]">Libro con 3 pestañas (Materias, Calendario y Lista)</div>
+              </div>
+            </button>
+
+            {/* Opción ICS */}
+            <button
+              type="button"
+              onClick={() => handleAction(onExportIcs)}
+              className="w-full text-left px-3 py-2 text-xs flex items-start gap-2.5 hover:bg-[var(--border-subtle)]/30 transition-colors text-[var(--text-main)]"
+            >
+              <CalendarPlus className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-medium">Calendario (.ics)</div>
+                <div className="text-[11px] text-[var(--text-muted)]">Compatible con Google Calendar, Apple Calendar y Outlook</div>
               </div>
             </button>
 

@@ -40,6 +40,12 @@ export default defineConfig(() => {
               if (id.includes('xlsx')) {
                 return 'vendor-xlsx';
               }
+              // jsPDF y html-to-image se cargan de forma dinámica (solo cuando
+              // el usuario exporta a PDF). Aislarlos en chunks propios evita
+              // que engrosen el bundle inicial de la app.
+              if (id.includes('jspdf') || id.includes('html-to-image')) {
+                return 'vendor-pdf';
+              }
               const RADIX_ECOSYSTEM = [
                 '@radix-ui',
                 '@floating-ui',

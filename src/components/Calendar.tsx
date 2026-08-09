@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, DAYS, HOURS } from '../types';
+import { Activity, DAYS, HOURS, DayOfWeek } from '../types';
 import { formatTime } from '../utils/time';
 import { DayColumn } from './DayColumn';
 
@@ -28,12 +28,68 @@ export function Calendar({
   useColorfulMode,
   onScroll,
 }: CalendarProps) {
-  
+  const [activeCell, setActiveCell] = React.useState<{ day: DayOfWeek; hour: number } | null>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleGlobalClick(e: MouseEvent | TouchEvent) {
+      if (!activeCell) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      // If click/tap is inside the active dropdown element, do not intercept
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
+      }
+
+      // If tap/click was on another grid cell, stop propagation so it doesn't open a new dropdown
+      const isGridCell = (target as HTMLElement).closest?.('[data-tour="calendar-cell"]');
+      if (isGridCell) {
+        e.stopPropagation();
+      }
+
+      // Close the active dropdown
+      setActiveCell(null);
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setActiveCell(null);
+      }
+    }
+
+    if (activeCell !== null) {
+      window.addEventListener('click', handleGlobalClick, true);
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('click', handleGlobalClick, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeCell]);
+
+  // Effect to center the dropdown itself after it renders
+  React.useEffect(() => {
+    if (activeCell && dropdownRef.current) {
+      setTimeout(() => {
+        dropdownRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+      }, 50);
+    }
+  }, [activeCell]);
+
+  const handleCellToggle = (day: DayOfWeek, hour: number, e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    if (activeCell) {
+      setActiveCell(null);
+      return;
+    }
+    setActiveCell({ day, hour });
+  };
+
   return (
-    <div className="h-full print-auto-height flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-sm)]">
+    <div className="h-full print-calendar-outer flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-sm)]">
       {/* Scrollable Container for Mobile */}
       <div 
-        className="flex-1 overflow-auto relative bg-[var(--bg-surface)] print-auto-height"
+        className="flex-1 overflow-auto relative bg-[var(--bg-surface)] print-scroll-container"
         onScroll={onScroll}
       >
         <div className="min-w-[720px] h-full flex flex-col bg-[var(--bg-surface)]" id="calendar-export-area">
@@ -82,6 +138,10 @@ export function Calendar({
                   onColorChange={onColorChange}
                   useColorfulMode={useColorfulMode}
                   columnIndex={idx}
+                  activeCell={activeCell}
+                  onCellToggle={handleCellToggle}
+                  onCloseCell={() => setActiveCell(null)}
+                  dropdownRef={dropdownRef}
                 />
               ))}
             </div>

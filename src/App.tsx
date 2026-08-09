@@ -20,8 +20,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { SubjectSelectionModal } from './components/SubjectSelectionModal';
 import { ListPlus } from 'lucide-react';
 import { ExportDropdown } from './components/ExportDropdown';
-import { exportToExcel, exportToCSV } from './utils/export';
-import { PdfExportDialog } from './components/PdfExportDialog';
+import { exportToExcel, exportToCSV, exportToICS, exportToPDF } from './utils/export';
 
 // Horario Academico Main App Component - Impeccable Design
 export default function App() {
@@ -44,8 +43,6 @@ export default function App() {
   } | null>(null);
 
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
-  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
-  const [includePdfSubjectList, setIncludePdfSubjectList] = useState(true);
   const [isFabExpanded, setIsFabExpanded] = useState(true);
   const [manualTriggerSignal, setManualTriggerSignal] = useState(0);
   const lastScrollY = React.useRef(0);
@@ -97,6 +94,7 @@ export default function App() {
     loadFromStorage<Record<string, string>>('colorOverrides', {})
   );
   const [pendingMapping, setPendingMapping] = useState<PendingMappingFile | null>(null);
+  const [pendingSheetQueue, setPendingSheetQueue] = useState<File[]>([]);
   const [pendingExcel, setPendingExcel] = useState<{ file: File; sheets: string[] } | null>(null);
   const [csvUploadError, setCsvUploadError] = useState<string | null>(null);
   const [useColorfulMode, setUseColorfulMode] = useState<boolean>(() =>
@@ -184,27 +182,37 @@ export default function App() {
   const handleExcelConfirm = async (selectedSheets: string[]) => {
     if (!pendingExcel) return;
     setCsvUploadError(null);
+    // Capturar referencia local antes de limpiar el estado
+    const excelFile = pendingExcel.file;
+    setPendingExcel(null);
     try {
+      // Convertir TODAS las hojas seleccionadas a CSV virtuales de una vez
+      // y construir un mapa de archivo virtual → nombre de hoja para el diálogo
       const virtualFiles: File[] = [];
+      const sheetNameByFile = new Map<File, string>();
       for (const sheet of selectedSheets) {
-        const virtualCsv = await convertSheetToCSV(pendingExcel.file, sheet);
+        const virtualCsv = await convertSheetToCSV(excelFile, sheet);
         virtualFiles.push(virtualCsv);
+        sheetNameByFile.set(virtualCsv, sheet);
       }
-      
-      // Pass the virtual files to the existing CSV pipeline
+
       await processCsvFiles(
         virtualFiles,
         () => setCsvUploadError(null),
         handleExcelSheetsNeeded,
         setCsvUploadError,
         handleDataLoaded,
-        handleMappingNeeded
+        // Inyectar sheetName y cola restante en cada PendingMappingFile
+        (pending) => {
+          const idx = virtualFiles.indexOf(pending.file);
+          setPendingSheetQueue(idx >= 0 ? virtualFiles.slice(idx + 1) : []);
+          setPendingMapping({ ...pending, sheetName: sheetNameByFile.get(pending.file) });
+        },
       );
     } catch (err: any) {
       console.error('Error processing Excel', err);
       setCsvUploadError(err.message || 'Hubo un error al extraer las hojas de Excel.');
     }
-    setPendingExcel(null);
   };
 
   const handleExcelCancel = () => {
@@ -214,6 +222,10 @@ export default function App() {
   const handleMappingConfirm = async (mapping: ColumnMapping) => {
     if (!pendingMapping) return;
     setCsvUploadError(null);
+    const queue = pendingSheetQueue;
+    // Limpiar estado de mapeo y cola ANTES de procesar para evitar renders dobles
+    setPendingMapping(null);
+    setPendingSheetQueue([]);
     try {
       const fingerprint = fingerprintHeaders(pendingMapping.preview.headers);
       const savedMappings = loadFromStorage<Record<string, ColumnMapping>>('columnMappings', {});
@@ -221,15 +233,40 @@ export default function App() {
       saveToStorage('columnMappings', savedMappings);
 
       await processFileAfterMapping(pendingMapping.file, mapping, handleDataLoaded);
+
+      // Reanudar las hojas restantes de la cola (si las hay)
+      if (queue.length > 0) {
+        await processCsvFiles(
+          queue,
+          () => setCsvUploadError(null),
+          handleExcelSheetsNeeded,
+          setCsvUploadError,
+          handleDataLoaded,
+          (pending) => {
+            // Si hay más hojas que necesitan mapeo, mantener la cola actualizada
+            const idx = queue.indexOf(pending.file);
+            // Extraer el nombre de hoja del nombre del archivo virtual
+            // (patrón: "FileName.xlsx - SheetName.csv")
+            const rawName = pending.file.name;
+            const dashIdx = rawName.indexOf(' - ');
+            const sheetName = dashIdx >= 0
+              ? rawName.slice(dashIdx + 3).replace(/\.csv$/i, '')
+              : undefined;
+            setPendingSheetQueue(idx >= 0 ? queue.slice(idx + 1) : []);
+            setPendingMapping({ ...pending, sheetName });
+          },
+        );
+      }
     } catch (err: any) {
       console.error('Error processing CSV after mapping', err);
       setCsvUploadError(err.message || 'Hubo un error al procesar el archivo CSV.');
     }
-    setPendingMapping(null);
   };
 
   const handleMappingCancel = () => {
+    // Descartar tanto el mapeo pendiente como cualquier hoja restante en la cola
     setPendingMapping(null);
+    setPendingSheetQueue([]);
   };
 
   const handleRemoveFile = (fileName: string) => {
@@ -318,12 +355,18 @@ export default function App() {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
-      const dataUrl = await toPng(exportNode, {
-        backgroundColor: isDark ? '#111827' : '#ffffff',
-        cacheBust: true,
-        pixelRatio: 2,
-        width: targetWidth,
-      });
+      let dataUrl = '';
+      try {
+        exportNode.classList.add('exporting-mode');
+        dataUrl = await toPng(exportNode, {
+          backgroundColor: isDark ? '#111827' : '#ffffff',
+          cacheBust: true,
+          pixelRatio: 2,
+          width: targetWidth,
+        });
+      } finally {
+        exportNode.classList.remove('exporting-mode');
+      }
 
       if (tempContainer) {
         document.body.removeChild(tempContainer);
@@ -401,12 +444,30 @@ export default function App() {
     exportToCSV(selectedActivities, 'agenda');
   };
 
-  const handleTriggerPrint = () => {
-    setIsPdfDialogOpen(false);
-    // Un pequeño timeout permite que el modal se cierre antes de invocar la impresión
-    setTimeout(() => {
-      window.print();
-    }, 100);
+  const handleExportIcs = () => {
+    if (selectedActivities.length === 0) {
+      setConfirmState({
+        isOpen: true,
+        title: 'Horario sin asignaturas',
+        message: 'No has agregado ninguna asignatura al horario. ¿Deseas exportar el calendario vacío?',
+        variant: 'info',
+        onConfirm: () => {
+          setConfirmState(null);
+          exportToICS(selectedActivities);
+        },
+      });
+      return;
+    }
+    exportToICS(selectedActivities);
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      await exportToPDF(selectedActivities);
+    } catch (err) {
+      console.error('Error exportando PDF', err);
+      alert('Hubo un error al generar el PDF.');
+    }
   };
 
   const totalCreditos = selectedActivities.reduce((acc, curr) => {
@@ -423,7 +484,7 @@ export default function App() {
     isSubjectModalOpen;
 
   return (
-    <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200 print-app-root">
       {/* Top Header */}
       <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-2 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0 z-[85] shadow-[var(--shadow-sm)]">
         <div className="flex items-center space-x-1 sm:space-x-2.5 min-w-0 pr-1 sm:pr-2">
@@ -518,7 +579,9 @@ export default function App() {
               onExportExcel={handleExportExcel}
               onExportCsvMaterias={handleExportCsvMaterias}
               onExportCsvAgenda={handleExportCsvAgenda}
-              onExportPdf={() => setIsPdfDialogOpen(true)}
+              onExportPdf={handleExportPdf}
+              onExportIcs={handleExportIcs}
+              onPrint={() => window.print()}
               isExportingPng={isExporting}
             />
           )}
@@ -526,7 +589,7 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative print-main-wrapper">
         {/* Mobile Backdrop Overlay */}
         {isMobileSidebarOpen && (
           <div
@@ -767,6 +830,7 @@ export default function App() {
               sampleRows={pendingMapping.preview.sampleRows}
               initialMapping={pendingMapping.initialMapping}
               fileName={pendingMapping.file.name}
+              sheetName={pendingMapping.sheetName}
               onConfirm={handleMappingConfirm}
               onCancel={handleMappingCancel}
             />
@@ -861,54 +925,50 @@ export default function App() {
         onRemoveActivity={handleRemoveActivity}
       />
 
-      <AnimatePresence>
-        {isPdfDialogOpen && (
-          <PdfExportDialog
-            includeSubjectList={includePdfSubjectList}
-            onIncludeSubjectListChange={setIncludePdfSubjectList}
-            onConfirm={handleTriggerPrint}
-            onCancel={() => setIsPdfDialogOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Print-Only Subjects Table */}
-      {includePdfSubjectList && selectedActivities.length > 0 && (
-        <div className="hidden print-only-subjects p-8 bg-white">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900 border-b pb-2">Resumen del Horario y Asignaturas Inscritas</h2>
-            <div className="flex gap-6 mt-3 text-sm font-medium text-slate-700">
-              <p><span className="font-bold text-slate-900">{totalCreditos}</span> Créditos Totales</p>
-              <p><span className="font-bold text-slate-900">{selectedActivities.length}</span> Materias</p>
+      {/* Tabla de materias — exclusiva para window.print() */}
+      {selectedActivities.length > 0 && (
+        <div className="print-only-subjects" style={{ display: 'none' }} aria-hidden="true">
+          <div style={{ backgroundColor: '#ffffff', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', borderBottom: '2px solid #cbd5e1', paddingBottom: '8px' }}>
+                Resumen del Horario y Asignaturas Inscritas
+              </h2>
+              <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '14px', fontWeight: '500', color: '#334155' }}>
+                <p><span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                  {selectedActivities.reduce((acc, curr) => acc + (parseInt(curr.creditos, 10) || 0), 0)}
+                </span> Créditos Totales</p>
+                <p><span style={{ fontWeight: 'bold', color: '#0f172a' }}>{selectedActivities.length}</span> Materias</p>
+              </div>
             </div>
-          </div>
-          <table className="w-full text-left border-collapse text-sm text-slate-700">
-            <thead>
-              <tr className="border-b-2 border-slate-300">
-                <th className="py-2 px-3 font-semibold">Asignatura</th>
-                <th className="py-2 px-3 font-semibold">Grupo</th>
-                <th className="py-2 px-3 font-semibold">Créditos</th>
-                <th className="py-2 px-3 font-semibold">Profesor</th>
-                <th className="py-2 px-3 font-semibold">Horario</th>
-                <th className="py-2 px-3 font-semibold">Sala</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedActivities.map((act) => (
-                <tr key={act.id} className="border-b border-slate-200">
-                  <td className="py-2 px-3 font-medium">{act.asignatura}</td>
-                  <td className="py-2 px-3">{act.grupo}</td>
-                  <td className="py-2 px-3">{act.creditos || '-'}</td>
-                  <td className="py-2 px-3">{act.profesor || '-'}</td>
-                  <td className="py-2 px-3">{act.horarioTexto || '-'}</td>
-                  <td className="py-2 px-3">{act.sala || '-'}</td>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '13px', color: '#334155' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #94a3b8' }}>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Asignatura</th>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Grupo</th>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Créditos</th>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Profesor</th>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Horario</th>
+                  <th style={{ padding: '8px 12px', fontWeight: '600' }}>Sala</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {selectedActivities.map((act) => (
+                  <tr key={act.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '8px 12px', fontWeight: '500' }}>{act.asignatura}</td>
+                    <td style={{ padding: '8px 12px' }}>{act.grupo}</td>
+                    <td style={{ padding: '8px 12px' }}>{act.creditos || '-'}</td>
+                    <td style={{ padding: '8px 12px' }}>{act.profesor || '-'}</td>
+                    <td style={{ padding: '8px 12px' }}>{act.horarioTexto || '-'}</td>
+                    <td style={{ padding: '8px 12px' }}>{act.sala || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
+
   );
 }
 

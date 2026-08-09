@@ -63,7 +63,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       aria-label={`Detalles de asignatura ${activity.asignatura}, Grupo ${activity.grupo}`}
       aria-expanded={showTooltip}
       className={cn(
-        "relative h-full w-full rounded-md p-1.5 text-xs group transition-all duration-200 border-l-3 border-[var(--color-primary)] shadow-sm cursor-pointer flex flex-col border border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] select-none [-webkit-touch-callout:none]",
+        "relative h-full w-full overflow-hidden rounded-md p-1.5 text-xs group transition-all duration-200 border-l-3 border-[var(--color-primary)] shadow-sm cursor-pointer flex flex-col border border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] select-none [-webkit-touch-callout:none]",
         (showTooltip || showColorPicker) && "active-card",
         !effectiveColorId && "bg-[var(--bg-app)] text-[var(--text-main)]"
       )}
@@ -90,13 +90,13 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       }}
     >
 
-      <div className="flex justify-between items-start print:flex-col print:items-start">
-        <h4 className="text-[10px] print:text-[8px] print:break-words print:hyphens-auto font-semibold leading-tight truncate print-truncate-none pr-1">
+      <div className="flex justify-between items-start print:flex-col print:items-start overflow-hidden">
+        <h4 className="text-[10px] print:text-[8px] print:break-words print:hyphens-auto font-semibold leading-tight truncate print:whitespace-normal print:overflow-hidden pr-1">
           {activity.asignatura}
         </h4>
         <span className="text-[9px] print:text-[8px] font-medium text-[var(--color-primary)] shrink-0 print:mt-0.5">G{activity.grupo.padStart(2, '0')}</span>
       </div>
-      <p className="text-[9px] print:text-[8px] print:break-words mt-1 leading-tight truncate print-truncate-none text-[var(--text-muted)]">
+      <p className="text-[9px] print:text-[8px] print:break-words mt-1 leading-tight truncate print:whitespace-normal print:overflow-hidden text-[var(--text-muted)]">
         {activity.sala && `${activity.sala} • `}{activity.profesor}
       </p>
       
@@ -109,7 +109,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
           if (!showColorPicker && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
             const popoverHeight = 110;
-            const openUpward = rect.top > popoverHeight;
+            const openUpward = (window.innerHeight - rect.bottom) < popoverHeight || rect.top > window.innerHeight - 150;
             let top = openUpward ? rect.top - popoverHeight : rect.bottom + 4;
             let left = rect.left + 4;
             const popoverWidth = 144;
@@ -186,7 +186,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
 
       {/* Tooltip / Details */}
       {showTooltip && (
-        <div className="absolute top-full left-0 mt-1 z-50 w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] break-words text-xs font-sans">
+        <div className={`absolute ${schedule.timeRange.start >= 17 * 60 ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] break-words text-xs font-sans`}>
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Modalidad:</strong> {activity.modalidad || 'N.A.'}</p>
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Grupo:</strong> {activity.grupo}</p>
           <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Créditos:</strong> {activity.creditos || 'N.A.'}</p>

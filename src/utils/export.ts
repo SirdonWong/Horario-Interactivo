@@ -381,3 +381,366 @@ export function exportToCSV(
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+const DAY_TO_RRULE: Record<string, string> = {
+  Lunes: 'MO',
+  Martes: 'TU',
+  Miércoles: 'WE',
+  Miercoles: 'WE',
+  Jueves: 'TH',
+  Viernes: 'FR',
+  Sábado: 'SA',
+  Sabado: 'SA',
+  Domingo: 'SU',
+};
+
+const DAY_INDEX: Record<string, number> = {
+  Domingo: 0,
+  Lunes: 1,
+  Martes: 2,
+  Miércoles: 3,
+  Miercoles: 3,
+  Jueves: 4,
+  Viernes: 5,
+  Sábado: 6,
+  Sabado: 6,
+};
+
+function getNextDateForWeekday(dayName: string): Date {
+  const targetIndex = DAY_INDEX[dayName] ?? 1;
+  const today = new Date();
+  const todayIndex = today.getDay();
+  let diff = targetIndex - todayIndex;
+  if (diff < 0) diff += 7;
+  const result = new Date(today);
+  result.setDate(today.getDate() + diff);
+  return result;
+}
+
+function formatICSDateTime(date: Date, minutesFromMidnight: number): string {
+  const hours = Math.floor(minutesFromMidnight / 60);
+  const mins = minutesFromMidnight % 60;
+  const yyyy = date.getFullYear();
+  const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+  const dd = date.getDate().toString().padStart(2, '0');
+  const hh = hours.toString().padStart(2, '0');
+  const min = mins.toString().padStart(2, '0');
+  return `${yyyy}${mm}${dd}T${hh}${min}00`;
+}
+
+function getUTCDateTimeString(date: Date = new Date()): string {
+  const yyyy = date.getUTCFullYear();
+  const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+  const dd = date.getUTCDate().toString().padStart(2, '0');
+  const hh = date.getUTCHours().toString().padStart(2, '0');
+  const min = date.getUTCMinutes().toString().padStart(2, '0');
+  const ss = date.getUTCSeconds().toString().padStart(2, '0');
+  return `${yyyy}${mm}${dd}T${hh}${min}${ss}Z`;
+}
+
+function getUTF8ByteLength(str: string): number {
+  let bytes = 0;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code <= 0x7f) bytes += 1;
+    else if (code <= 0x7ff) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      bytes += 4;
+      i++;
+    } else bytes += 3;
+  }
+  return bytes;
+}
+
+function foldICSLine(line: string): string {
+  const maxBytes = 75;
+  if (getUTF8ByteLength(line) <= maxBytes) {
+    return line;
+  }
+
+  let result = '';
+  let currentBytes = 0;
+
+  for (let i = 0; i < line.length; i++) {
+    let char = line[i];
+    const charCode = line.charCodeAt(i);
+    let charBytes = 1;
+
+    if (charCode <= 0x7f) charBytes = 1;
+    else if (charCode <= 0x7ff) charBytes = 2;
+    else if (charCode >= 0xd800 && charCode <= 0xdbff) {
+      charBytes = 4;
+      if (i + 1 < line.length) {
+        char += line[i + 1];
+        i++;
+      }
+    } else charBytes = 3;
+
+    if (currentBytes + charBytes > maxBytes) {
+      result += '\r\n ';
+      currentBytes = 1;
+    }
+    result += char;
+    currentBytes += charBytes;
+  }
+
+  return result;
+}
+
+function escapeICSText(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\n');
+}
+
+export function generateICSContent(activities: Activity[]): string {
+  const dtstamp = getUTCDateTimeString(new Date());
+
+  const rawLines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Horario Academico//ES',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+  ];
+
+  let eventIndex = 0;
+
+  for (const act of activities) {
+    if (!act.schedules || act.schedules.length === 0) continue;
+
+    for (const sch of act.schedules) {
+      const rruleDay = DAY_TO_RRULE[sch.day];
+      if (!rruleDay) continue;
+
+      eventIndex++;
+      const eventDate = getNextDateForWeekday(sch.day);
+      const dtstart = formatICSDateTime(eventDate, sch.timeRange.start);
+      const dtend = formatICSDateTime(eventDate, sch.timeRange.end);
+
+      const safeId = (act.id || 'act').replace(/[^a-zA-Z0-9-]/g, '-');
+      const uid = `event-${safeId}-${sch.day}-${eventIndex}@horario-academico.local`;
+
+      const description = [
+        `Modalidad: ${act.modalidad || 'N.A.'}`,
+        `Grupo: ${act.grupo || 'N.A.'}`,
+        `Créditos: ${act.creditos || 'N.A.'}`,
+        `Profesor: ${act.profesor || 'Sin asignar'}`,
+        `Sala: ${act.sala || 'Por definir'}`,
+      ].join(' | ');
+
+      rawLines.push(
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtstamp}`,
+        `DTSTART:${dtstart}`,
+        `DTEND:${dtend}`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${rruleDay}`,
+        `SUMMARY:${escapeICSText(act.asignatura || '')}`,
+        `LOCATION:${escapeICSText(act.sala || '')}`,
+        `DESCRIPTION:${escapeICSText(description)}`,
+        'END:VEVENT'
+      );
+    }
+  }
+
+  rawLines.push('END:VCALENDAR');
+
+  const foldedLines = rawLines.map(line => foldICSLine(line));
+  return foldedLines.join('\r\n') + '\r\n';
+}
+
+export function exportToICS(activities: Activity[], filename = 'horario_academico.ics'): void {
+  const icsContent = generateICSContent(activities);
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Captura el calendario y la tabla de materias como imágenes y los combina
+ * en un PDF landscape de dos páginas.
+ * Usa carga dinámica (igual que exportToExcel) para no incrementar el bundle
+ * inicial: jsPDF y html-to-image solo se descargan al llamar esta función.
+ */
+export async function exportToPDF(activities: Activity[], filename = 'horario_academico.pdf'): Promise<void> {
+  // Carga dinámica de dependencias — no forman parte del bundle principal
+  const [{ toPng }, { jsPDF }, autoTableModule] = await Promise.all([
+    import('html-to-image'),
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  const autoTable = autoTableModule.default;
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const bgColor = isDark ? '#111827' : '#ffffff';
+
+  // ── Página 1: área del calendario ─────────────────────────────────────────
+  const calendarEl = document.getElementById('calendar-export-area');
+  if (!calendarEl) {
+    throw new Error('No se encontró el elemento del calendario (#calendar-export-area).');
+  }
+
+  // Si la pantalla es estrecha, clonar en un contenedor de ancho fijo (mismo
+  // patrón que la exportación PNG existente en App.tsx)
+  const targetWidth = Math.max(1200, calendarEl.clientWidth);
+  let exportNode: HTMLElement = calendarEl;
+  let tempContainer: HTMLDivElement | null = null;
+
+  if (calendarEl.clientWidth < 1200) {
+    tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '1200px';
+    tempContainer.style.opacity = '0';
+    tempContainer.style.pointerEvents = 'none';
+
+    exportNode = calendarEl.cloneNode(true) as HTMLElement;
+    exportNode.style.width = '1200px';
+    exportNode.style.minWidth = '1200px';
+    exportNode.style.height = 'max-content';
+
+    tempContainer.appendChild(exportNode);
+    document.body.appendChild(tempContainer);
+
+    // Permitir que el navegador calcule el layout del clon
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  let calendarDataUrl = '';
+  try {
+    exportNode.classList.add('exporting-mode');
+    calendarDataUrl = await toPng(exportNode, {
+      backgroundColor: bgColor,
+      cacheBust: true,
+      pixelRatio: 2,
+      width: targetWidth,
+    });
+  } finally {
+    exportNode.classList.remove('exporting-mode');
+  }
+
+  if (tempContainer) {
+    document.body.removeChild(tempContainer);
+    tempContainer = null;
+  }
+
+  // ── Construir PDF con jsPDF ───────────────────────────────────────────────
+  // Usamos un Image temporal para obtener las dimensiones reales de la captura
+  const getImageDimensions = (dataUrl: string): Promise<{ w: number; h: number }> =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.src = dataUrl;
+    });
+
+  const calDims = await getImageDimensions(calendarDataUrl);
+
+  // Página en landscape, unidades en puntos (pt), formato A4
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  // Dimensiones del área imprimible en A4 landscape (pt)
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+
+  // Escalar la imagen del calendario para que quepa en la página manteniendo
+  // la proporción
+  const calRatio = Math.min(pageW / calDims.w, pageH / calDims.h);
+  const calW = calDims.w * calRatio;
+  const calH = calDims.h * calRatio;
+  const calX = (pageW - calW) / 2;
+  const calY = (pageH - calH) / 2;
+
+  pdf.addImage(calendarDataUrl, 'PNG', calX, calY, calW, calH);
+
+  // ── Página 2: tabla de materias inscritas (Vectorial) ────────────────────
+  if (activities && activities.length > 0) {
+    pdf.addPage();
+    
+    // Título de la tabla
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('Resumen del Horario y Asignaturas Inscritas', 40, 40);
+
+    // Línea separadora tenue bajo el título
+    pdf.setDrawColor(203, 213, 225); // slate-300
+    pdf.setLineWidth(1);
+    pdf.line(40, 48, pageW - 40, 48);
+
+    // Subtítulo (Totales con diseño coincidente al modo impresión)
+    const totalCreditos = activities.reduce((acc, curr) => {
+      const num = parseInt(curr.creditos, 10);
+      return acc + (isNaN(num) ? 0 : num);
+    }, 0);
+
+    const totalCreditosStr = String(totalCreditos);
+    const materiasStr = String(activities.length);
+
+    let currentX = 40;
+    const currentY = 66;
+
+    pdf.setFontSize(11);
+
+    // 1. Número de créditos (Negrita, slate-900)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(totalCreditosStr, currentX, currentY);
+    currentX += pdf.getTextWidth(totalCreditosStr) + 4;
+
+    // 2. Etiqueta "Créditos Totales" (Normal, slate-700)
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(51, 65, 85);
+    pdf.text('Créditos Totales', currentX, currentY);
+    currentX += pdf.getTextWidth('Créditos Totales') + 20;
+
+    // 3. Número de materias (Negrita, slate-900)
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(materiasStr, currentX, currentY);
+    currentX += pdf.getTextWidth(materiasStr) + 4;
+
+    // 4. Etiqueta "Materias" (Normal, slate-700)
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(51, 65, 85);
+    pdf.text('Materias', currentX, currentY);
+
+    // Preparar datos para la tabla
+    const tableColumn = ["Asignatura", "Grupo", "Créditos", "Profesor", "Horario", "Sala"];
+    const tableRows = activities.map(act => [
+      act.asignatura,
+      act.grupo,
+      act.creditos || '-',
+      act.profesor || '-',
+      act.horarioTexto || '-',
+      act.sala || '-'
+    ]);
+
+    // Generar la tabla con autoTable
+    autoTable(pdf, {
+      startY: 80,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: 255 }, // slate-900
+      alternateRowStyles: { fillColor: [248, 250, 252] }, // slate-50
+      styles: { fontSize: 9, cellPadding: 6 },
+    });
+  }
+
+  pdf.save(filename);
+}
