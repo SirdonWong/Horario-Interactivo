@@ -221,7 +221,7 @@ export function DayColumn({
           return (
             <div
               key={activity.id}
-              className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[100] px-1"
+              className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[60] px-1"
               style={{
                 top: `${topPercent}%`,
                 height: `${heightPercent}%`,

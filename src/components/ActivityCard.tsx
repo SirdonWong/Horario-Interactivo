@@ -29,6 +29,34 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number; openUpward: boolean } | null>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; bottom: number; left: number; openUpward: boolean } | null>(null);
+
+  const isTouchRef = useRef(false);
+
+  useEffect(() => {
+    if (showTooltip && cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      // Abre hacia arriba solo si no hay espacio abajo Y hay más espacio arriba (220px es aprox. la altura del tooltip)
+      const openUpward = spaceBelow < 220 && spaceAbove > spaceBelow;
+      let left = rect.left;
+      
+      const popoverWidth = 224; // w-56 is 224px
+      if (left + popoverWidth > window.innerWidth) {
+        left = Math.max(8, window.innerWidth - popoverWidth - 8);
+      }
+      
+      setTooltipPosition({
+        top: rect.bottom + 4,
+        bottom: window.innerHeight - rect.top + 4,
+        left,
+        openUpward
+      });
+    }
+  }, [showTooltip, schedule.timeRange.start]);
 
   const antecedentesPendientes = materiasCompletadas ? getPendingPrerequisites(activity.asignatura, activity.antecedentes, materiasCompletadas) : [];
   const notasMateria = getMateriaNotas(activity.asignatura);
@@ -58,6 +86,7 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
   
   return (
     <div
+      ref={cardRef}
       tabIndex={0}
       role="button"
       aria-label={`Detalles de asignatura ${activity.asignatura}, Grupo ${activity.grupo}`}
@@ -71,11 +100,25 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
         backgroundColor: `var(--swatch-${effectiveColorId}-bg)`,
         color: `var(--swatch-${effectiveColorId}-text)`,
       } : undefined}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onTouchStart={() => setShowTooltip(true)}
-      onTouchEnd={() => setShowTooltip(false)}
-      onTouchCancel={() => setShowTooltip(false)}
+      onMouseEnter={() => {
+        if (!isTouchRef.current) setShowTooltip(true);
+      }}
+      onMouseLeave={() => {
+        if (!isTouchRef.current) setShowTooltip(false);
+      }}
+      onTouchStart={() => {
+        isTouchRef.current = true;
+        setShowTooltip(true);
+      }}
+      onTouchEnd={() => {
+        setShowTooltip(false);
+        setTimeout(() => { isTouchRef.current = false; }, 500);
+      }}
+      onTouchCancel={() => {
+        setShowTooltip(false);
+        setTimeout(() => { isTouchRef.current = false; }, 500);
+      }}
+      onTouchMove={() => setShowTooltip(false)}
       onContextMenu={(e) => {
         // Prevents the native context menu on mobile when long-pressing
         if (window.matchMedia('(pointer: coarse)').matches) {
@@ -185,32 +228,49 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
       </button>
 
       {/* Tooltip / Details */}
-      {showTooltip && (
-        <div className={`absolute ${schedule.timeRange.start >= 17 * 60 ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] break-words text-xs font-sans`}>
-          <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Modalidad:</strong> {activity.modalidad || 'N.A.'}</p>
-          <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Grupo:</strong> {activity.grupo}</p>
-          <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Créditos:</strong> {activity.creditos || 'N.A.'}</p>
-          <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Profesor:</strong> {activity.profesor || 'Sin asignar'}</p>
-          <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Sala:</strong> {activity.sala || 'Por definir'}</p>
-          {showAntecedentes && (
-            <>
-              {activity.antecedentes && (
-                <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Antecedentes:</strong> {activity.antecedentes}</p>
+      {createPortal(
+        <AnimatePresence>
+          {showTooltip && tooltipPosition && (
+            <motion.div
+              initial={{ opacity: 0, y: tooltipPosition.openUpward ? 5 : -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: tooltipPosition.openUpward ? 5 : -5 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-[200] w-56 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl p-3 text-[var(--text-main)] break-words text-xs font-sans pointer-events-none"
+              style={{
+                left: tooltipPosition.left,
+                ...(tooltipPosition.openUpward
+                  ? { bottom: tooltipPosition.bottom }
+                  : { top: tooltipPosition.top })
+              }}
+            >
+              <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Modalidad:</strong> {activity.modalidad || 'N.A.'}</p>
+              <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Grupo:</strong> {activity.grupo}</p>
+              <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Créditos:</strong> {activity.creditos || 'N.A.'}</p>
+              <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Profesor:</strong> {activity.profesor || 'Sin asignar'}</p>
+              <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Sala:</strong> {activity.sala || 'Por definir'}</p>
+              {showAntecedentes && (
+                <>
+                  {activity.antecedentes && (
+                    <p className="mb-1"><strong className="text-[var(--text-muted)] font-medium">Antecedentes:</strong> {activity.antecedentes}</p>
+                  )}
+                  {notasMateria && (
+                    <p className="mb-1 text-[10px] text-[var(--text-muted)] italic">
+                      {notasMateria}
+                    </p>
+                  )}
+                  {antecedentesPendientes.length > 0 && (
+                    <p className="mb-1 text-amber-500 font-medium">
+                      ⚠ Antecedente pendiente: {antecedentesPendientes.join(', ')}
+                    </p>
+                  )}
+                </>
               )}
-              {notasMateria && (
-                <p className="mb-1 text-[10px] text-[var(--text-muted)] italic">
-                  {notasMateria}
-                </p>
-              )}
-              {antecedentesPendientes.length > 0 && (
-                <p className="mb-1 text-amber-500 font-medium">
-                  ⚠ Antecedente pendiente: {antecedentesPendientes.join(', ')}
-                </p>
-              )}
-            </>
+              <p><strong className="text-[var(--text-muted)] font-medium">Horario:</strong> {formatTime(schedule.timeRange.start)} - {formatTime(schedule.timeRange.end)}</p>
+            </motion.div>
           )}
-          <p><strong className="text-[var(--text-muted)] font-medium">Horario:</strong> {formatTime(schedule.timeRange.start)} - {formatTime(schedule.timeRange.end)}</p>
-        </div>
+        </AnimatePresence>,
+        document.body
       )}
 
     </div>
