@@ -8,7 +8,7 @@ const ColumnMappingDialog = React.lazy(() =>
   )
 );
 import { ExcelSheetDialog } from './components/ExcelSheetDialog';
-import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle } from 'lucide-react';
+import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle, Info } from 'lucide-react';
 import { TourOrchestrator } from './components/TourOrchestrator';
 
 import { loadFromStorage, saveToStorage } from './utils/storage';
@@ -265,8 +265,8 @@ export default function App() {
         );
       }
     } catch (err: any) {
-      console.error('Error processing CSV after mapping', err);
-      setCsvUploadError(err.message || 'Hubo un error al procesar el archivo CSV.');
+      console.error('Error processing file after mapping', err);
+      setCsvUploadError(err.message || 'Hubo un error al procesar el archivo.');
     }
   };
 
@@ -280,7 +280,7 @@ export default function App() {
     setConfirmState({
       isOpen: true,
       title: `¿Eliminar "${fileName}"?`,
-      message: `Se eliminarán las materias asociadas a este archivo CSV de tu oferta disponible.`,
+      message: `Se eliminarán las materias asociadas a este archivo de tu oferta disponible.`,
       variant: 'danger',
       onConfirm: () => {
         setAvailableActivities(prev => prev.filter(a => a.sourceFile !== fileName));
@@ -315,7 +315,7 @@ export default function App() {
   const handleClearData = () => {
     setConfirmState({
       isOpen: true,
-      title: '¿Limpiar Todo el Calendario y CSVs?',
+      title: '¿Limpiar Todo el Calendario y Archivos Cargados?',
       message: 'Se eliminarán todas las asignaturas cargadas y selecciones de tu sesión actual.',
       variant: 'danger',
       onConfirm: () => {
@@ -684,7 +684,7 @@ export default function App() {
             <div>
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                  Archivos CSV ({loadedFiles.length})
+                  Archivos cargados ({loadedFiles.length})
                 </h3>
                 {loadedFiles.length > 0 && (
                   <button
@@ -727,7 +727,7 @@ export default function App() {
               ) : (
                 <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-app)] border border-[var(--border-subtle)] p-3 rounded-lg flex items-center space-x-2">
                   <FileSpreadsheet className="w-4 h-4 shrink-0" />
-                  <span>Sin CSVs cargados</span>
+                  <span>Sin archivos cargados</span>
                 </div>
               )}
 
@@ -792,9 +792,15 @@ export default function App() {
               <h3 className="text-base font-semibold text-[var(--text-main)] mb-1">
                 Comienza cargando tu oferta académica
               </h3>
-              <p className="text-xs text-[var(--text-muted)] max-w-sm mb-6">
-                Sube uno o varios archivos CSV con las asignaturas disponibles para armar y optimizar tu horario.
+              <p className="text-xs text-[var(--text-muted)] max-w-md sm:max-w-lg mb-5">
+                Sube uno o varios archivos (<span className="font-medium text-[var(--text-main)]">.csv</span> o <span className="font-medium text-[var(--text-main)]">.xlsx</span>) con las asignaturas disponibles para armar tu horario.
               </p>
+              <div className="bg-[var(--bg-app)] border border-[var(--border-subtle)] rounded-lg p-3 max-w-md sm:max-w-lg text-left flex items-start space-x-2.5 text-xs text-[var(--text-muted)] shadow-sm">
+                <Info className="w-4 h-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
+                <p className="leading-normal">
+                  <strong className="font-semibold text-[var(--text-main)]">Nota sobre archivos CSV:</strong> Si subes un archivo CSV en español, asegúrate de guardarlo con codificación <span className="font-semibold text-[var(--text-main)]">UTF-8</span> para evitar problemas de lectura en nombres de materias y profesores con acentos.
+                </p>
+              </div>
             </div>
           ) : (
             <Calendar

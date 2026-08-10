@@ -160,8 +160,8 @@ export async function processCsvFiles(
       }
     }
   } catch (err: any) {
-    console.error("Error parsing CSV", err);
-    onError(err.message || "Hubo un error al procesar el archivo CSV.");
+    console.error("Error parsing file", err);
+    onError(err.message || "Hubo un error al procesar el archivo.");
   }
 }
 

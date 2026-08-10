@@ -132,7 +132,7 @@ export function SubjectSelectionModal({
                   <Search className="w-5 h-5 text-[var(--text-muted)]" />
                 </div>
                 <p className="text-sm font-medium text-[var(--text-main)]">No se encontraron materias</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs">Intenta con otra búsqueda o asegúrate de haber cargado el CSV correspondiente.</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1 max-w-xs">Intenta con otra búsqueda o asegúrate de haber cargado el archivo correspondiente.</p>
               </div>
             ) : (
               filteredActivities.map((activity) => {
