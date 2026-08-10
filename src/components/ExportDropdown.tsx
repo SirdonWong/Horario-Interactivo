@@ -133,7 +133,7 @@ export function ExportDropdown({
             >
               <FileText className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium">Documento PDF</div>
+                <div className="font-medium">PDF</div>
                 <div className="text-[11px] text-[var(--text-muted)]">Descarga directa, 2 páginas (calendario + materias)</div>
               </div>
             </button>
@@ -161,7 +161,7 @@ export function ExportDropdown({
             >
               <Image className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium">Imagen PNG</div>
+                <div className="font-medium">PNG</div>
                 <div className="text-[11px] text-[var(--text-muted)]">Captura visual del calendario</div>
               </div>
             </button>
