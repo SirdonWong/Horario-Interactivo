@@ -23,7 +23,7 @@ import { ExportDropdown } from './components/ExportDropdown';
 import { exportToExcel, exportToCSV, exportToICS, exportToPDF } from './utils/export';
 import { normalizeColorOverrideKey } from './utils/colors';
 
-// Horario Academico Main App Component - Impeccable Design
+// Horario Interactivo Main App Component - Impeccable Design
 export default function App() {
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -384,7 +384,7 @@ export default function App() {
       const blobUrl = URL.createObjectURL(blob);
 
       const link = document.createElement('a');
-      link.download = 'horario_academico.png';
+      link.download = 'horario_interactivo.png';
       link.href = blobUrl;
       link.style.display = 'none';
       document.body.appendChild(link);
@@ -512,7 +512,7 @@ export default function App() {
               className="text-base sm:text-lg font-bold italic tracking-tight text-[var(--text-main)] leading-none truncate"
               style={{ fontFamily: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" }}
             >
-              Horario Académico
+              Horario Interactivo
             </h1>
             <p className="hidden sm:block text-[11px] text-[var(--text-muted)] font-medium mt-1 truncate">
               Planificación y optimización
@@ -827,7 +827,7 @@ export default function App() {
           <span>{selectedActivities.length} seleccionadas</span>
         </div>
         <div className="hidden sm:block">
-          Horario Académico
+          Horario Interactivo
         </div>
       </footer>
 

@@ -37,7 +37,7 @@ const STAGES: StageDef[] = [
     steps: [
       {
         target: 'prereq-toggle',
-        title: '¡Bienvenido a Horario Académico!',
+        title: '¡Bienvenido a Horario Interactivo!',
         description:
           'Antes de empezar: este switch controla si la app valida tus prerrequisitos contra la malla de Psicología. Si estudias otra carrera o no lo necesitas, puedes apagarlo aquí.',
       },

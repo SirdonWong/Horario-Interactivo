@@ -253,7 +253,7 @@ function generateMatrixSheet(activities: Activity[], XLSX: any) {
 /**
  * Exporta las actividades seleccionadas a un archivo Excel (.xlsx) con 2 pestañas.
  */
-export async function exportToExcel(activities: Activity[], filename = 'horario_academico.xlsx'): Promise<void> {
+export async function exportToExcel(activities: Activity[], filename = 'horario_interactivo.xlsx'): Promise<void> {
   const importXLSX = await import('xlsx-js-style');
   const XLSX = importXLSX.default || importXLSX;
 
@@ -504,7 +504,7 @@ export function generateICSContent(activities: Activity[]): string {
   const rawLines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Horario Academico//ES',
+    'PRODID:-//Horario Interactivo//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ];
@@ -524,7 +524,7 @@ export function generateICSContent(activities: Activity[]): string {
       const dtend = formatICSDateTime(eventDate, sch.timeRange.end);
 
       const safeId = (act.id || 'act').replace(/[^a-zA-Z0-9-]/g, '-');
-      const uid = `event-${safeId}-${sch.day}-${eventIndex}@horario-academico.local`;
+      const uid = `event-${safeId}-${sch.day}-${eventIndex}@horario-interactivo.local`;
 
       const description = [
         `Modalidad: ${act.modalidad || 'N.A.'}`,
@@ -555,7 +555,7 @@ export function generateICSContent(activities: Activity[]): string {
   return foldedLines.join('\r\n') + '\r\n';
 }
 
-export function exportToICS(activities: Activity[], filename = 'horario_academico.ics'): void {
+export function exportToICS(activities: Activity[], filename = 'horario_interactivo.ics'): void {
   const icsContent = generateICSContent(activities);
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
   const link = document.createElement('a');
@@ -576,7 +576,7 @@ export function exportToICS(activities: Activity[], filename = 'horario_academic
  * Usa carga dinámica (igual que exportToExcel) para no incrementar el bundle
  * inicial: jsPDF y html-to-image solo se descargan al llamar esta función.
  */
-export async function exportToPDF(activities: Activity[], filename = 'horario_academico.pdf'): Promise<void> {
+export async function exportToPDF(activities: Activity[], filename = 'horario_interactivo.pdf'): Promise<void> {
   // Carga dinámica de dependencias — no forman parte del bundle principal
   const [{ toPng }, { jsPDF }, autoTableModule] = await Promise.all([
     import('html-to-image'),
