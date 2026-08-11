@@ -420,18 +420,3 @@ node scratch/analyze_report.mjs
 ---
 
 ## 9. Elementos sin deploy
-
-Las mejoras y correcciones desarrolladas que compilan limpiamente en desarrollo pero están pendientes de su próximo despliegue en producción:
-
-- **Módulo de Exportación Directa a PDF Vectorial (`src/utils/export.ts`):**
-  - Carga diferida de `jspdf`, `jspdf-autotable` y `html-to-image` en el chunk `vendor-pdf`.
-  - Página 1: Captura gráfica a resolución 2x del calendario aprovechando `.exporting-mode` para desplegar títulos de materias completos sin `...` y ocultar botones de edición.
-  - Página 2: Tabla vectorial nativa de materias inscritas con métricas formateadas en negrita y línea divisoria superior.
-- **Módulo de Exportación a Calendario iCalendar (`.ics`):**
-  - Generador de eventos semanales recurrentes con IDs únicos y descripción unificada en una sola línea.
-- **Optimización de Impresión Nativa (`window.print()`):**
-  - Reglas `@media print` en `index.css` que restablecen el flujo de bloque, eliminan bordes y sombras alrededor de la cuadrícula en la hoja 1, forzan salto de página en `.print-only-subjects` (hoja 2) y aplican márgenes de 5 mm.
-- **Pipeline de Carga Excel Multilámina:**
-  - Encolado de hojas de trabajo (`pendingSheetQueue`) y propagación del parámetro `sheetName` a los modales de mapeo.
-- **Scripts de Prueba y Verificación (`scratch/`):**
-  - Scripts de prueba de exportaciones, accesibilidad y análisis de bundle report.
