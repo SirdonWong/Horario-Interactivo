@@ -93,7 +93,7 @@ export function ExportDropdown({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         disabled={isBusy}
-        className="flex items-center justify-center p-2 sm:px-3.5 sm:py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
+        className="flex items-center justify-center p-2 sm:px-3.5 sm:h-8 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shrink-0"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >

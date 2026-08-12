@@ -30,16 +30,6 @@ export interface PendingMappingFile {
 export function Uploader({ onDataLoaded, onMappingNeeded, onExcelSheetsNeeded, onError, onClearError }: UploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processFileWithMapping = async (file: File, mapping: ColumnMapping) => {
-    const activities = await parseCSVData(file, mapping);
-    const newFiles: LoadedFile[] = [{
-      id: `${file.name}-${Date.now()}`,
-      name: file.name,
-      count: activities.length,
-    }];
-    onDataLoaded(activities, newFiles);
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -64,7 +54,7 @@ export function Uploader({ onDataLoaded, onMappingNeeded, onExcelSheetsNeeded, o
       <label
         htmlFor="csv-file-input"
         data-tour="uploader-button"
-        className="flex items-center justify-center p-2 sm:px-3.5 sm:py-1 bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg text-xs sm:text-xs font-medium border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all shadow-sm cursor-pointer select-none"
+        className="flex items-center justify-center p-2 sm:px-3.5 sm:h-8 bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg text-xs sm:text-xs font-medium border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all shadow-sm cursor-pointer select-none"
       >
         <input
           id="csv-file-input"

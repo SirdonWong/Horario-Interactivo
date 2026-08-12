@@ -68,11 +68,11 @@ export function Calendar({
     };
   }, [activeCell]);
 
-  // Effect to center the dropdown itself after it renders
+  // Effect to scroll dropdown into view smoothly without aggressive yanking
   React.useEffect(() => {
     if (activeCell && dropdownRef.current) {
       setTimeout(() => {
-        dropdownRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+        dropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
       }, 50);
     }
   }, [activeCell]);
@@ -151,6 +151,3 @@ export function Calendar({
     </div>
   );
 }
-
-
-

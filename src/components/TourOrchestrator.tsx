@@ -36,16 +36,16 @@ const STAGES: StageDef[] = [
     seenKey: 'welcomeSeen',
     steps: [
       {
-        target: 'prereq-toggle',
+        target: 'uploader-button',
         title: '¡Bienvenido a Horario Interactivo!',
         description:
-          'Antes de empezar: este switch controla si la app valida tus prerrequisitos contra la malla de Psicología. Si estudias otra carrera o no lo necesitas, puedes apagarlo aquí.',
+          'Comienza cargando tu oferta académica. Sube uno o varios archivos CSV o Excel con las materias disponibles del semestre para armar tu horario.',
       },
       {
-        target: 'uploader-button',
-        title: 'Sube tu oferta académica',
+        target: 'prereq-toggle',
+        title: 'Validar Prerrequisitos',
         description:
-          'Aquí puedes cargar uno o varios archivos CSV o Excel con las materias disponibles del semestre. En cuanto subas el primero, te muestro cómo armar tu horario.',
+          'Este switch controla si la app valida tus prerrequisitos contra la malla académica. Puedes activarlo o desactivarlo según tus necesidades.',
       },
     ],
   },

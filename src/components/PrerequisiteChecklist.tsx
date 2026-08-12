@@ -272,17 +272,25 @@ export function PrerequisiteChecklist({
 
                     return (
                       <div key={semestre} className="bg-[var(--bg-app)] rounded-lg border border-[var(--border-subtle)] overflow-hidden transition-all shadow-xs">
-                        {/* Header del Semestre con Checkbox de Selección Masiva, Barra de Progreso y Acordeón */}
+                        {/* Header del Semestre con Botón de Selección Masiva, Barra de Progreso y Acordeón */}
                         <div className="p-3 flex flex-col bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] select-none">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={todasCompletadas}
-                                onChange={(e) => handleToggleSemestreBulk(materias, e.target.checked)}
-                                className="rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSemestreBulk(materias, !todasCompletadas)}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out border border-transparent select-none focus:outline-none ${
+                                  todasCompletadas ? 'bg-[var(--color-primary)]' : 'bg-[var(--border-strong)]'
+                                }`}
                                 title={todasCompletadas ? "Desmarcar todo el semestre" : "Marcar todo el semestre"}
-                              />
+                                aria-label={todasCompletadas ? "Desmarcar todo el semestre" : "Marcar todo el semestre"}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                                    todasCompletadas ? 'translate-x-[18px]' : 'translate-x-0.5'
+                                  }`}
+                                />
+                              </button>
                               <span
                                 className="text-xs font-semibold text-[var(--text-main)] cursor-pointer hover:text-[var(--color-primary)] transition-colors flex items-center space-x-2"
                                 onClick={() => toggleSemestreCollapse(semestre)}
@@ -338,26 +346,21 @@ export function PrerequisiteChecklist({
                                 {materias.map((m) => {
                                   const isChecked = completadas.has(m.id);
                                   return (
-                                    <motion.label
+                                    <motion.div
                                       key={m.id}
                                       whileTap={{ scale: 0.98 }}
-                                      className={`flex items-center justify-between p-2 rounded-md text-xs cursor-pointer transition-colors border ${
+                                      onClick={() => onToggle(m.id)}
+                                      className={`flex items-center justify-between p-2.5 rounded-lg text-xs cursor-pointer transition-all border select-none ${
                                         isChecked
-                                          ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--text-main)] font-medium'
+                                          ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--text-main)] font-semibold shadow-xs'
                                           : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] text-[var(--text-main)]'
                                       }`}
                                     >
                                       <div className="flex items-center space-x-2.5 truncate pr-2">
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          onChange={() => onToggle(m.id)}
-                                          className="shrink-0 rounded border-[var(--border-strong)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                                        />
                                         <span className="truncate font-medium">{m.nombre}</span>
                                       </div>
-                                      <span className="text-[10px] text-[var(--text-muted)] shrink-0">{m.creditos} cr</span>
-                                    </motion.label>
+                                      <span className="text-[10px] text-[var(--text-muted)] shrink-0 font-medium">{m.creditos} cr</span>
+                                    </motion.div>
                                   );
                                 })}
                               </div>

@@ -123,10 +123,10 @@ export function DayColumn({
 
               {/* Dropdown menu */}
               {isCellActive && (
-                <div 
+                <div
                   ref={dropdownRef}
                   className={`absolute ${hour >= 17 ? 'bottom-9' : 'top-9'} w-[75vw] sm:w-80 bg-[var(--bg-surface)] shadow-xl border border-[var(--border-strong)] rounded-lg p-1.5 sm:p-2 z-[65] max-h-[280px] sm:max-h-[230px] overflow-y-auto ${getDropdownPositionClass()}`}
-                  onClick={(e) => e.stopPropagation()} 
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-1.5 px-0.5 pb-1 border-b border-[var(--border-subtle)]">
                     <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight truncate">
@@ -145,7 +145,7 @@ export function DayColumn({
                       <X className="w-3 h-3" />
                     </button>
                   </div>
-                  
+
                   {available.length === 0 ? (
                     <div className="p-2 text-[11px] text-[var(--text-muted)] text-center">No hay asignaturas disponibles</div>
                   ) : (
@@ -164,12 +164,12 @@ export function DayColumn({
                             key={act.id}
                             className={cn(
                               "p-1.5 rounded-md text-[11px] transition-colors border border-[var(--border-subtle)] leading-tight",
-                              isApproved 
-                                ? "opacity-50 bg-black/5 dark:bg-white/5 cursor-not-allowed" 
+                              isApproved
+                                ? "opacity-50 bg-black/5 dark:bg-white/5 cursor-not-allowed"
                                 : isSameSubjectSelected
                                   ? "opacity-50 bg-blue-500/10 border-blue-500/20 cursor-not-allowed"
-                                  : isConflict 
-                                    ? "opacity-50 bg-red-500/10 border-red-500/20 cursor-not-allowed" 
+                                  : isConflict
+                                    ? "opacity-50 bg-red-500/10 border-red-500/20 cursor-not-allowed"
                                     : "hover:bg-[var(--bg-app)] cursor-pointer hover:border-[var(--border-strong)]"
                             )}
                             onClick={(e) => {
@@ -213,7 +213,7 @@ export function DayColumn({
           const calendarStartOffset = 7 * 60; // 07:00 AM
           const topMinutes = schedule.timeRange.start - calendarStartOffset;
           const durationMinutes = schedule.timeRange.end - schedule.timeRange.start;
-          
+
           const totalCalendarMinutes = 15 * 60; // 15 horas (07:00 a 21:00)
           const topPercent = (topMinutes / totalCalendarMinutes) * 100;
           const heightPercent = (durationMinutes / totalCalendarMinutes) * 100;

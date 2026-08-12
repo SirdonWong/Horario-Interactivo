@@ -88,29 +88,20 @@ export function ExcelSheetDialog({
                 {sheets.map(sheet => {
                   const isChecked = selected.has(sheet);
                   return (
-                    <motion.label 
+                    <motion.div 
                       whileTap={{ scale: 0.98 }}
                       key={sheet} 
-                      className={`flex items-center px-4 py-3 cursor-pointer transition-colors group ${
+                      onClick={() => toggleSheet(sheet)}
+                      className={`flex items-center px-4 py-3 cursor-pointer transition-all select-none ${
                         isChecked 
-                          ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' 
-                          : 'hover:bg-[var(--bg-surface-hover)]'
+                          ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-semibold border-l-4 border-l-[var(--color-primary)] shadow-xs' 
+                          : 'hover:bg-[var(--bg-surface-hover)] text-[var(--text-main)]'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleSheet(sheet)}
-                        className="w-4 h-4 rounded border-[var(--border-strong)] accent-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
-                      />
-                      <span className={`ml-3 text-sm font-medium transition-colors ${
-                        isChecked 
-                          ? 'text-[var(--color-primary)]' 
-                          : 'text-[var(--text-main)] group-hover:text-[var(--color-primary)]'
-                      }`}>
+                      <span className="text-sm font-medium transition-colors">
                         {sheet}
                       </span>
-                    </motion.label>
+                    </motion.div>
                   );
                 })}
               </div>

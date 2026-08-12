@@ -8,10 +8,13 @@ const ColumnMappingDialog = React.lazy(() =>
   )
 );
 import { ExcelSheetDialog } from './components/ExcelSheetDialog';
-import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle, Info } from 'lucide-react';
+import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle, Info, Plus, Edit3, BookOpen } from 'lucide-react';
 import { TourOrchestrator } from './components/TourOrchestrator';
 
 import { loadFromStorage, saveToStorage } from './utils/storage';
+import { loadManualActivities, saveManualActivities } from './utils/manualActivities';
+import { hasConflict } from './utils/time';
+import { ManualActivityFormModal } from './components/ManualActivityFormModal';
 import { PrerequisiteChecklist } from './components/PrerequisiteChecklist';
 import { ColumnMapping, fingerprintHeaders } from './utils/columnMapping';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -107,6 +110,12 @@ export default function App() {
     loadFromStorage<boolean>('useColorfulMode', false)
   );
 
+  const [manualActivities, setManualActivities] = useState<Activity[]>(() =>
+    loadManualActivities()
+  );
+  const [manualActivityModalState, setManualActivityModalState] = useState<{ mode: 'create' | 'edit'; activity?: Activity } | null>(null);
+  const [manualActivityConflictWarning, setManualActivityConflictWarning] = useState<string | null>(null);
+
   const isFirstRender = React.useRef(true);
 
   useEffect(() => {
@@ -147,12 +156,22 @@ export default function App() {
     saveToStorage('useColorfulMode', useColorfulMode);
   }, [useColorfulMode]);
 
+  useEffect(() => {
+    if (isFirstRender.current) return;
+    saveManualActivities(manualActivities);
+  }, [manualActivities]);
+
   const handleColorChange = (asignatura: string, colorId: string) => {
     const key = normalizeColorOverrideKey(asignatura);
     setColorOverrides(prev => ({ ...prev, [key]: colorId }));
   };
 
   const materiasCompletadasSet = React.useMemo(() => new Set(materiasCompletadas), [materiasCompletadas]);
+
+  const allAvailableActivities = React.useMemo(
+    () => [...availableActivities, ...manualActivities],
+    [availableActivities, manualActivities]
+  );
 
   const toggleMateriaCompletada = (materiaId: string) => {
     setMateriasCompletadas((prev) =>
@@ -327,6 +346,51 @@ export default function App() {
     });
   };
 
+  const handleOpenCreateManualActivity = () => {
+    setManualActivityModalState({ mode: 'create' });
+  };
+
+  const handleOpenEditManualActivity = (activity: Activity) => {
+    setManualActivityModalState({ mode: 'edit', activity });
+  };
+
+  const handleSaveManualActivity = (activity: Activity) => {
+    if (manualActivityModalState?.mode === 'create') {
+      setManualActivities(prev => [...prev, activity]);
+    } else {
+      setManualActivities(prev => prev.map(a => a.id === activity.id ? activity : a));
+      
+      if (selectedActivities.some(a => a.id === activity.id)) {
+        setSelectedActivities(prev => prev.map(a => a.id === activity.id ? activity : a));
+        
+        const conflictingActivities = selectedActivities.filter(a => 
+          a.id !== activity.id && hasConflict(activity.schedules, a.schedules)
+        );
+        
+        if (conflictingActivities.length > 0) {
+          const names = conflictingActivities.map(a => `${a.asignatura} (Grupo ${a.grupo})`);
+          setManualActivityConflictWarning(`Traslape de horario entre "${activity.asignatura}" y: ${names.join(', ')}.`);
+        } else {
+          setManualActivityConflictWarning(null);
+        }
+      }
+    }
+    setManualActivityModalState(null);
+  };
+
+  const handleDeleteManualActivity = (activity: Activity) => {
+    setConfirmState({
+      isOpen: true,
+      title: `¿Eliminar '${activity.asignatura}'?`,
+      message: 'Esta asignatura personalizada será eliminada de tu lista y del calendario si estaba seleccionada.',
+      variant: 'danger',
+      onConfirm: () => {
+        setManualActivities(prev => prev.filter(a => a.id !== activity.id));
+        setSelectedActivities(prev => prev.filter(a => a.id !== activity.id));
+        setConfirmState(null);
+      },
+    });
+  };
 
   const handleExport = async () => {
     const el = document.getElementById('calendar-export-area');
@@ -488,7 +552,8 @@ export default function App() {
     pendingExcel !== null ||
     isPrerequisiteModalOpen ||
     confirmState !== null ||
-    isSubjectModalOpen;
+    isSubjectModalOpen ||
+    manualActivityModalState !== null;
 
   return (
     <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200 print-app-root">
@@ -498,7 +563,7 @@ export default function App() {
           {/* Mobile Sidebar Toggle Button */}
           <button
             onClick={() => setIsMobileSidebarOpen(prev => !prev)}
-            className="p-2 sm:p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all shrink-0"
+            className="p-2 sm:p-0 sm:w-8 sm:h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] lg:hidden hover:border-[var(--border-strong)] transition-all shrink-0 flex items-center justify-center"
             aria-label="Abrir panel de opciones"
             title="Panel de opciones"
           >
@@ -525,7 +590,7 @@ export default function App() {
           <button
             data-tour="prereq-toggle"
             onClick={() => setShowAntecedentes(prev => !prev)}
-            className={`hidden lg:flex items-center space-x-2 text-xs font-medium cursor-pointer px-3 py-1.5 rounded-lg border transition-all select-none ${
+            className={`hidden lg:flex items-center space-x-2 text-xs font-medium cursor-pointer px-3.5 sm:h-8 rounded-lg border transition-all select-none ${
               showAntecedentes
                 ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
                 : 'border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]'
@@ -539,7 +604,7 @@ export default function App() {
           {/* Colorful Mode Toggle Button */}
           <button
             onClick={() => setUseColorfulMode(prev => !prev)}
-            className={`p-2 sm:p-1 rounded-lg border transition-all flex items-center justify-center ${
+            className={`hidden sm:flex p-2 sm:p-0 sm:w-8 sm:h-8 rounded-lg border transition-all items-center justify-center ${
               useColorfulMode 
                 ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]" 
                 : "border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)]"
@@ -553,7 +618,7 @@ export default function App() {
           {/* Tutorial Help Button (desktop only) */}
           <button
             onClick={() => setManualTriggerSignal(prev => prev + 1)}
-            className="p-2 sm:p-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
+            className="hidden sm:flex p-2 sm:p-0 sm:w-8 sm:h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all items-center justify-center"
             title="Ver tutorial"
             aria-label="Ver tutorial"
           >
@@ -563,7 +628,7 @@ export default function App() {
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-2 sm:p-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
+            className="p-2 sm:p-0 sm:w-8 sm:h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all flex items-center justify-center"
             title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
             aria-label="Toggle theme"
           >
@@ -580,7 +645,7 @@ export default function App() {
           />
 
           {/* Export Dropdown */}
-          {availableActivities.length > 0 && (
+          {allAvailableActivities.length > 0 && (
             <ExportDropdown
               onExportPng={handleExport}
               onExportExcel={handleExportExcel}
@@ -608,9 +673,9 @@ export default function App() {
 
         {/* Left Sidebar (Static in Desktop, Sliding Drawer in Mobile) */}
         <aside className={`
-          fixed inset-y-0 left-0 z-[100] w-80 bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] p-5 flex flex-col space-y-6 overflow-y-auto shrink-0 shadow-2xl transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-[100] w-80 max-w-[85vw] bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] p-5 flex flex-col space-y-6 overflow-y-auto shrink-0 shadow-2xl transition-transform duration-300 ease-in-out
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 lg:static lg:w-72 lg:shadow-none lg:z-10
+          lg:translate-x-0 lg:static lg:w-72 lg:max-w-none lg:shadow-none lg:z-10
         `}>
           {/* Header Mobile Drawer Close Button */}
           <div className="flex items-center justify-between lg:hidden pb-2 border-b border-[var(--border-subtle)]">
@@ -766,6 +831,76 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Materias Manuales */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider flex items-center space-x-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Materias Personalizadas ({manualActivities.length})</span>
+                </h3>
+                <button
+                  onClick={handleOpenCreateManualActivity}
+                  className="text-[11px] text-[var(--color-primary)] font-medium hover:underline flex items-center space-x-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Agregar</span>
+                </button>
+              </div>
+
+              {manualActivityConflictWarning && (
+                <div className="mb-2.5 flex items-start justify-between gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-600 dark:text-amber-500">
+                  <p className="leading-snug">{manualActivityConflictWarning}</p>
+                  <button
+                    onClick={() => setManualActivityConflictWarning(null)}
+                    className="shrink-0 font-semibold"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              {manualActivities.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {manualActivities.map(activity => (
+                    <div
+                      key={activity.id}
+                      className="bg-[var(--bg-app)] border border-[var(--border-subtle)] p-2.5 rounded-lg flex items-center justify-between group transition-colors"
+                    >
+                      <div className="flex flex-col overflow-hidden mr-2">
+                        <p className="text-xs font-medium text-[var(--text-main)] truncate" title={activity.asignatura}>
+                          {activity.asignatura}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate">
+                          {activity.grupo} • {activity.horarioTexto || 'Sin horario'}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-1 shrink-0">
+                        <button
+                          onClick={() => handleOpenEditManualActivity(activity)}
+                          className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded transition-colors"
+                          title="Editar materia"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteManualActivity(activity)}
+                          className="text-[var(--text-muted)] hover:text-[var(--color-danger)] p-1 rounded transition-colors"
+                          title="Eliminar materia"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-app)] border border-[var(--border-subtle)] p-3 rounded-lg flex items-center space-x-2">
+                  <BookOpen className="w-4 h-4 shrink-0 opacity-50" />
+                  <span>Sin materias personalizadas</span>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Reset Action */}
@@ -783,8 +918,8 @@ export default function App() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-[var(--bg-app)] p-2.5 sm:p-4 overflow-hidden flex flex-col">
-          {availableActivities.length === 0 ? (
+        <main className="flex-1 min-w-0 bg-[var(--bg-app)] p-2.5 sm:p-4 overflow-hidden flex flex-col">
+          {allAvailableActivities.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 border border-dashed border-[var(--border-strong)] rounded-xl bg-[var(--bg-surface)]">
               <div className="w-12 h-12 rounded-full bg-[var(--color-primary-light)] flex items-center justify-center text-[var(--color-primary)] mb-4">
                 <CalendarIcon className="w-6 h-6" />
@@ -804,7 +939,7 @@ export default function App() {
             </div>
           ) : (
             <Calendar
-              availableActivities={availableActivities}
+              availableActivities={allAvailableActivities}
               selectedActivities={selectedActivities}
               onSelectActivity={handleSelectActivity}
               onRemoveActivity={handleRemoveActivity}
@@ -822,7 +957,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] px-4 sm:px-6 py-2 flex justify-between items-center text-[10px] sm:text-[11px] text-[var(--text-muted)] shrink-0 z-20">
         <div className="flex space-x-3 sm:space-x-4 truncate">
-          <span>{availableActivities.length} actividades disponibles</span>
+          <span>{allAvailableActivities.length} actividades disponibles</span>
           <span>•</span>
           <span>{selectedActivities.length} seleccionadas</span>
         </div>
@@ -885,7 +1020,7 @@ export default function App() {
 
       {/* Guided Tour Orchestrator */}
       <TourOrchestrator
-        hasAvailableActivities={availableActivities.length > 0}
+        hasAvailableActivities={allAvailableActivities.length > 0}
         hasSelectedActivities={selectedActivities.length > 0}
         anyModalOpen={anyModalOpen}
         manualTriggerSignal={manualTriggerSignal}
@@ -895,7 +1030,7 @@ export default function App() {
 
       {/* Floating Action Button (FAB) for Quick Selection */}
       <AnimatePresence>
-        {availableActivities.length > 0 && (
+        {allAvailableActivities.length > 0 && (
           <motion.button
             data-tour="fab-quick-select"
             initial={{ scale: 0, opacity: 0 }}
@@ -930,7 +1065,7 @@ export default function App() {
       <SubjectSelectionModal
         isOpen={isSubjectModalOpen}
         onClose={() => setIsSubjectModalOpen(false)}
-        availableActivities={availableActivities}
+        availableActivities={allAvailableActivities}
         selectedActivities={selectedActivities}
         materiasCompletadas={materiasCompletadasSet}
         showAntecedentes={showAntecedentes}
@@ -980,6 +1115,15 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <ManualActivityFormModal
+        isOpen={manualActivityModalState !== null}
+        mode={manualActivityModalState?.mode ?? 'create'}
+        initialActivity={manualActivityModalState?.activity}
+        colorIndex={manualActivities.length}
+        onSave={handleSaveManualActivity}
+        onCancel={() => setManualActivityModalState(null)}
+      />
     </div>
 
   );
