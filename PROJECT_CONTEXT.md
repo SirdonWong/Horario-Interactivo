@@ -2,7 +2,7 @@
 
 ## 1. Resumen general
 
-- **Qué hace la app:** Aplicación web sobria e interactiva ("**Horario Interactivo**") para planificar y optimizar horarios académicos universitarios. Permite cargar ofertas en CSV o Excel (`.xlsx`, `.xls`), seleccionar asignaturas/grupos en una grilla semanal deslizable con horas fijas (7:00 a 21:00), prevenir traslapes/conflictos de horario, gestionar prerrequisitos (con un switch `ON`/`OFF`), consultar el catálogo completo mediante un modal de "Selección Rápida", recorrer un tutorial guiado e interactivo por etapas, alternar temas (Claro / Oscuro) y exportar el horario en múltiples formatos: PDF de 2 páginas (página 1: captura del calendario a resolución 2x; página 2: tabla vectorial con `jspdf-autotable`), impresión nativa (`window.print()`), Excel estilizado (`.xlsx` multilámina), iCalendar (`.ics`), CSV en UTF-8 con BOM y gráfico PNG.
+- **Qué hace la app:** Aplicación web sobria e interactiva ("**Horario Interactivo**") para planificar y optimizar horarios académicos universitarios. Permite cargar ofertas en CSV o Excel (`.xlsx`, `.xls`), agregar o editar materias personalizadas manualmente, seleccionar asignaturas/grupos en una grilla semanal deslizable con horas fijas (7:00 a 21:00), prevenir traslapes/conflictos de horario, gestionar prerrequisitos (con modales de tarjetas seleccionables y switch pill `ON`/`OFF`), consultar el catálogo completo mediante un modal de "Selección Rápida", recorrer un tutorial guiado e interactivo por etapas, alternar temas (Claro / Oscuro) y exportar el horario en múltiples formatos: PDF de 2 páginas (página 1: captura del calendario a resolución 2x; página 2: tabla vectorial con `jspdf-autotable`), impresión nativa (`window.print()`), Excel estilizado (`.xlsx` multilámina), iCalendar (`.ics`), CSV en UTF-8 con BOM y gráfico PNG.
 - **Stack tecnológico:**
   - **Framework / UI:** React 19 (`react@^19.0.1`, `react-dom@^19.0.1`)
   - **Lenguaje:** TypeScript 5.8 (`typescript@~5.8.2`)
@@ -33,17 +33,20 @@ Horario-Académico/
 ├── scratch/                        # Scripts de verificación, pruebas funcionales de runtime y análisis.
 │   ├── analyze_report.mjs          # Script para analizar la distribución y peso de paquetes en el bundle report.
 │   ├── bundle-report.html          # Reporte gráfico interactivo generado por rollup-plugin-visualizer.
+│   ├── parse_report.mjs            # Parser auxiliar de datos para reportes.
 │   ├── test-export.mjs             # Prueba sintética de funciones de exportación de datos.
 │   ├── test_creditos_fallback.mjs  # Prueba de inferencia de créditos entre filas.
 │   ├── test_excel.mjs              # Prueba de parseo y conversión de libros Excel (.xlsx).
 │   ├── test_http_and_html.mjs      # Prueba de conectividad HTTP en servidor local.
 │   ├── test_ics.ts                 # Prueba de generación de eventos iCalendar (.ics) y formato de descripción.
+│   ├── test_manual_activities.mjs  # Prueba funcional de creación, edición y parseo de actividades manuales.
 │   ├── test_matrix_excel.mjs       # Prueba de generación de Excel matricial multilámina con xlsx-js-style.
 │   ├── test_output.xlsx            # Archivo de salida generado durante pruebas de Excel.
 │   ├── test_pdf_export_flow.mjs    # Prueba de integración del flujo de impresión y exportación a PDF.
 │   ├── test_real_ics.mjs           # Prueba funcional con la lógica real de exportación a iCalendar.
 │   ├── test_ui_flow.mjs            # Verificación de integración de componentes UI.
-│   └── test_uploader_accessibility.mjs # Prueba estática de accesibilidad en el componente Uploader.
+│   ├── test_uploader_accessibility.mjs # Prueba estática de accesibilidad en el componente Uploader.
+│   └── verify_components.mjs       # Verificación de eliminación de checkboxes nativos y toggles en modales.
 ├── src/                            # Código fuente de la aplicación.
 │   ├── App.tsx                     # Componente principal: estado global, marca Horario Interactivo, FAB flotante, colas Excel, modales y layout.
 │   ├── main.tsx                    # Punto de entrada React que monta App en el DOM.
@@ -55,9 +58,10 @@ Horario-Académico/
 │   │   ├── ColumnMappingDialog.tsx # Modal accesible para mapear columnas CSV no reconocidas o de hojas de Excel (Radix Select + Motion).
 │   │   ├── ConfirmDialog.tsx       # Modal de confirmación estilizado para reemplazar alertas nativas de navegador.
 │   │   ├── DayColumn.tsx           # Columna diaria: celdas de hora, dropdown de opciones y tarjetas agendadas con `:has(.active-card)`.
-│   │   ├── ExcelSheetDialog.tsx    # Diálogo interactivo para seleccionar qué hojas de un libro Excel (.xlsx) importar.
+│   │   ├── ExcelSheetDialog.tsx    # Diálogo para seleccionar hojas de un libro Excel (.xlsx) mediante filas interactivas tipo tarjeta.
 │   │   ├── ExportDropdown.tsx      # Menú desplegable en el Header para elegir formato de exportación (PDF, Imprimir, PNG, Excel, ICS, CSV).
-│   │   ├── PrerequisiteChecklist.tsx # Modal de gestión de materias aprobadas con acordeón por semestre y buscador.
+│   │   ├── ManualActivityFormModal.tsx # Modal de formulario para crear y editar materias/eventos personalizados manualmente.
+│   │   ├── PrerequisiteChecklist.tsx # Modal de gestión de materias aprobadas con tarjetas seleccionables, acordeón y pill toggle por semestre.
 │   │   ├── SubjectSelectionModal.tsx # Modal de "Selección Rápida": buscador multi-campo para agregar asignaturas en masa.
 │   │   ├── TourOrchestrator.tsx    # Orquestador del tutorial guiado (secuencia de etapas, re-resolución de targets y control responsivo del drawer).
 │   │   ├── TourSpotlight.tsx       # Overlay del spotlight (hueco con anillo de color, sombra gigante para tema claro/oscuro y listener en el elemento real).
@@ -75,6 +79,7 @@ Horario-Académico/
 │       ├── dummy.ts                # Stub de módulo para resolver alias en Vite/Rollup (`fs`, `stream`, `crypto`).
 │       ├── excel.ts                # Helper lazy-loaded (`xlsx`) para convertir hojas de Excel a formato CSV virtual.
 │       ├── export.ts               # Módulo de exportación: PDF en 2 páginas (`jsPDF` + `jspdf-autotable`), Calendarios `.ics`, Excel (.xlsx) y CSV.
+│       ├── manualActivities.ts     # Creación, edición, conversión y validación de actividades agregadas manualmente.
 │       ├── progress.ts             # Exportación e importación del avance del checklist en JSON.
 │       ├── storage.ts              # Wrapper de `localStorage` con versionado de esquema (`SCHEMA_VERSION = 1`).
 │       ├── time.ts                 # Normalización de textos de tiempo, parseo de rangos horarios y detección de traslapes/conflictos.
@@ -111,7 +116,7 @@ export interface LoadedFile {
 }
 
 export interface Activity {
-  id: string;             // Formato: Asignatura + "-" + Grupo
+  id: string;             // Formato: Asignatura + "-" + Grupo (o "manual-<timestamp>" para personalizadas)
   modalidad: string;
   asignatura: string;
   creditos: string;
@@ -123,6 +128,7 @@ export interface Activity {
   schedules: ActivitySchedule[];
   color: string;
   sourceFile?: string;
+  isManual?: boolean;     // Flag que distingue actividades personalizadas creadas manualmente
 }
 
 export interface TourProgress {
@@ -149,24 +155,22 @@ Campos canónicos que el sistema mapea desde los encabezados del CSV o Excel:
 
 ## 4. Componentes y módulos clave
 
-- **`src/App.tsx`**: Administra el estado global bajo la marca "**Horario Interactivo**" (actividades disponibles/seleccionadas, archivos cargados, materias completadas, banderas de configuración, cola de hojas pendientes de Excel `pendingSheetQueue`), botón flotante desplegable (FAB) para selección rápida con detección de scroll (`handleCalendarScroll`), sincronización en `localStorage`, exportaciones (PNG, PDF, ICS, CSV, Excel) e integración del layout.
+- **`src/App.tsx`**: Administra el estado global bajo la marca "**Horario Interactivo**" (actividades disponibles/seleccionadas, archivos cargados, materias completadas, actividades manuales, banderas de configuración, cola de hojas pendientes de Excel `pendingSheetQueue`), botón flotante desplegable (FAB) para selección rápida con detección de scroll (`handleCalendarScroll`), sincronización en `localStorage`, exportaciones (PNG, PDF, ICS, CSV, Excel) e integración del layout.
 - **`src/components/Calendar.tsx`**: Contenedor visual del calendario con columna fija de horas (7:00 a 21:00), elevación del estado `activeCell` y backdrop transparente para descarte global de desplegables.
 - **`src/components/DayColumn.tsx`**: Renderiza las celdas horarias de un día específico, gestiona el desplegable de opciones disponibles por celda y la posición absoluta de materias seleccionadas con elevación `:has(.active-card):z-[60]`.
 - **`src/components/ActivityCard.tsx`**: Tarjeta gráfica de cada materia agendada; calcula colores Neón/Glassmorphism, tooltips informativos y popovers de color renderizados en portales fuera del flujo principal (con lógica dinámica de cálculo de bordes para abrir hacia arriba si no hay espacio inferior), prevención de conflictos al tocar/hacer clic y adaptación para exportación e impresión (`overflow-hidden`, `print:whitespace-normal`).
 - **`src/components/SubjectSelectionModal.tsx`**: Modal de "Selección Rápida" con buscador multi-campo (materia, profesor, grupo, sala, horario) para agregar/remover asignaturas en masa.
-- **`src/components/PrerequisiteChecklist.tsx`**: Modal emergente con acordeón por semestre para marcar materias aprobadas de la malla curricular y gestionar el avance.
+- **`src/components/PrerequisiteChecklist.tsx`**: Modal emergente con acordeón por semestre y tarjetas seleccionables sin checkboxes nativos, con pill toggle switch en cabecera de semestre y buscador para marcar materias aprobadas.
 - **`src/components/ColumnMappingDialog.tsx`**: Modal cargado dinámicamente (`React.lazy`) que permite al usuario asociar manualmente las columnas de un CSV no reconocido o de hojas de Excel (muestra subtítulo `"Hoja: NombreHoja"` cuando aplica).
-- **`src/components/ExcelSheetDialog.tsx`**: Diálogo para seleccionar qué hojas de un archivo `.xlsx` importar al sistema.
+- **`src/components/ExcelSheetDialog.tsx`**: Diálogo para seleccionar qué hojas de un archivo `.xlsx` importar usando filas interactivas tipo tarjetas sin checkboxes nativos.
+- **`src/components/ManualActivityFormModal.tsx`**: Modal de formulario responsivo para crear o editar actividades y materias personalizadas manualmente (configuración de horarios por día, créditos, grupo, aula y color).
 - **`src/components/ExportDropdown.tsx`**: Menú desplegable en el Header que centraliza la descarga del horario en PDF (`jsPDF`), Imprimir (`window.print()`), PNG (`html-to-image`), Excel (`.xlsx`), Calendario (`.ics`), CSV Materias y CSV Agenda.
 - **`src/components/ConfirmDialog.tsx`**: Componente modal de confirmación con variantes visuales que reemplaza `window.confirm`.
 - **`src/components/TourOrchestrator.tsx`**: Orquesta el tutorial paso a paso por etapas ("welcome", "loaded", "color"), gestiona la apertura/cierre automático del drawer móvil en pantallas pequeñas y oculta pausadamente el spotlight cuando `anyModalOpen` es verdadero.
 - **`src/components/TourSpotlight.tsx`**: Renderiza la máscara visual del tutorial (hueco con anillo `--color-primary`, sombra responsiva según tema claro/oscuro) y adjunta un event listener al elemento real del DOM para avanzar de paso manteniendo la interacción original.
 - **`src/components/Uploader.tsx`**: Maneja la carga drag-and-drop o por selección de archivos CSV/Excel (`.csv`, `.xlsx`, `.xls`) con validación de extensiones, detección de columnas y feedback.
-- **`src/utils/export.ts`**: Lógica de exportación multiformato:
-  - **`exportToPDF`**: Descarga directa de PDF en 2 páginas A4 landscape (`jsPDF` + `jspdf-autotable` + `html-to-image`).
-  - **`exportToICS` / `generateICSContent`**: Generador de archivos de calendario `.ics` compatibles con Google Calendar, Apple Calendar y Outlook.
-  - **`exportToExcel`**: Generador de libros Excel estilizados (`xlsx-js-style`) con 3 pestañas (*Materias Inscritas*, *Calendario Semanal* y *Lista de Sesiones*).
-  - **`exportToCSV`**: Exportación en formato CSV UTF-8 con BOM.
+- **`src/utils/manualActivities.ts`**: Helper de creación, edición, parseo y validación para el ciclo de vida de actividades personalizadas (`createManualActivity`, `updateManualActivity`).
+- **`src/utils/export.ts`**: Lógica de exportación multiformato (PDF de 2 páginas con `jsPDF` + `jspdf-autotable`, Calendarios `.ics`, Excel `.xlsx` estilizado con `xlsx-js-style` y CSV UTF-8 con BOM).
 - **`src/utils/dummy.ts`**: Stub de módulo para la resolución de alias en Vite/Rollup (`fs`, `stream`, `crypto`).
 - **`src/utils/csv.ts`**: Convierte texto CSV en objetos `Activity`, gestionando limpieza de BOM, encabezados legacy e inferencia de créditos.
 - **`src/utils/time.ts`**: Parsea rangos horarios flexibles (ej. "16:00-18:00", "8:00 a 2:00 pm"), agrupa formatos semanales y detecta traslapes/conflictos.
@@ -338,32 +342,30 @@ export function saveToStorage<T>(key: string, data: T): void {
 
 ## 6. Cambios respecto al plan original
 
+- **Sustitución de Checkboxes Nativos por Tarjetas e Insumos Visuales Seleccionables (`PrerequisiteChecklist.tsx` / `ExcelSheetDialog.tsx`):** Se eliminaron los `<input type="checkbox">` nativos del navegador. En `PrerequisiteChecklist.tsx`, cada asignatura es una tarjeta interactiva con resalte en azul primario (`bg-[var(--color-primary-light)]`, `border-[var(--color-primary)]`), mientras que la acción masiva por semestre en la cabecera utiliza un **toggle switch estilo pill** deslizable. En `ExcelSheetDialog.tsx`, las hojas de Excel se seleccionan mediante filas interactivas tipo tarjeta con acento de borde lateral.
+- **Creación y Edición de Materias/Eventos Personalizados (`ManualActivityFormModal.tsx` / `manualActivities.ts`):** Incorporación de un modal con formulario dedicado para agregar o modificar asignaturas y eventos personalizados manualmente en la agenda con selección de horario por día, profesor, sala, créditos y asignación de color.
 - **Renombrado y Marca Oficial ("Horario Interactivo"):** Actualización del título y branding general del sistema a "Horario Interactivo" en `index.html`, Header principal, `TourOrchestrator` y exportadores.
-- **Ajuste Fino de Elevación Hover y Posicionamiento Portaled (`ActivityCard.tsx` / `DayColumn.tsx`):** Unificación de la elevación z-index de tarjetas a `z-[60]` (`has-[.active-card]:z-[60]`) para evitar solapamientos violentos de profundidad. Los tooltips y el menú de selección de color (popovers) se renderizan mediante portales (`React.createPortal`) fuera de la jerarquía CSS de la tarjeta, calculando dinámicamente el espacio del viewport para cambiar su apertura hacia arriba cuando el espacio inferior es menor a 220px/110px.
-- **Gestión Accesible de Cierre de Menú de Celdas (`Calendar.tsx` / `DayColumn.tsx`):** Elevación del estado `activeCell` (`{ day: DayOfWeek; hour: number } | null`) a `Calendar.tsx`. Al desplegar un menú, se activa un backdrop transparente (`fixed inset-0 z-[60]`) que intercepta cualquier toque en el mapa/grilla para desarmar el menú activo sin abrir celdas no deseadas. Incorpora además un botón `X` de cierre en la cabecera del desplegable y soporte para la tecla `Escape`.
-- **Botón Flotante de Acción Rápida (FAB) con Detección de Scroll (`App.tsx`):** Integración de un botón flotante desplegable para abrir `SubjectSelectionModal`. El botón colapsa suavemente al deslizar hacia abajo en la grilla (`handleCalendarScroll`) y se expande al deslizar hacia arriba para no obstaculizar la visión del horario.
-- **Exportación a PDF Nativa y Vectorial en 2 Páginas (`exportToPDF`):** Implementación de descarga directa de PDF en formato A4 landscape. Utiliza la clase `.exporting-mode` para tomar una captura limpia del calendario a 2x resolución (Página 1) sin truncar nombres de materias y ocultando controles de edición, y genera una tabla vectorial estilizada usando `jspdf-autotable` (Página 2) con indicador de totales (**36** Créditos Totales **6** Materias) y línea divisoria superior.
-- **Exportación a Calendario iCalendar (`.ics`):** Módulo de generación de archivos de calendario `.ics` (`exportToICS` / `generateICSContent`). Crea eventos recurrentes semanales (`RRULE:FREQ=WEEKLY`), UIDs únicos, horarios `DTSTART`/`DTEND` locales y descripción unificada en una sola línea (`Modalidad | Grupo | Créditos | Profesor | Sala`).
-- **Modo de Impresión Nativo (`window.print()`):** Opción "Imprimir" en `ExportDropdown.tsx` con reglas `@media print` dedicadas en `index.css`: `@page { margin: 5mm; size: landscape; }`, anulación de `height: 100vh` y `overflow: hidden` en `#root`, `print-app-root` y `print-main-wrapper` para evitar recortar la segunda página, forzado de `min-width: 720px` para vista móvil, y eliminación de paddings en la grilla para maximizar el área imprimible de la hoja 1.
-- **Captura Visual Limpia sin Truncamiento (`.exporting-mode`):** Reglas CSS que se aplican temporalmente durante la captura con `html-to-image` (para PNG y PDF página 1). Anula `truncate` transformándolo en `white-space: normal !important` para envolver títulos largos de materias dentro del bloque, y oculta automáticamente los activadores de color (`[data-tour="color-picker-trigger"]`) y los botones de eliminar (`X`).
-- **Pipeline de Mapeo Continuo para Excel Multilámina (`pendingSheetQueue`):** Al cargar archivos Excel `.xlsx` con múltiples hojas que requieren mapeo interactivo de columnas, el sistema encola las hojas restantes en el estado `pendingSheetQueue`, inyecta el subtítulo `"Hoja: NombreHoja"` en `ColumnMappingDialog` y reanuda secuencialmente el procesamiento para cada hoja sin descartar material pendiente.
-- **Mapeo dinámico e interactivo de columnas CSV (`ColumnMappingDialog.tsx`):** En lugar de rechazar archivos con nombres de columnas no estándar, el sistema detecta diferencias, almacena una firma/fingerprint de encabezados en `localStorage` y muestra un modal interactivo usando `@radix-ui/react-select` animado con Motion.
-- **Inferencia automática de créditos entre filas (`csv.ts`):** Si un CSV incluye la columna de créditos vacía en algunas filas pero con valor en otra fila de la misma asignatura, el sistema propaga automáticamente los créditos conocidos.
-- **Sustitución de modales y avisos nativos por `<ConfirmDialog />`:** `window.confirm` se reemplazó por un modal visualmente coherente con animaciones de entrada/salida y variantes de peligro, advertencia e información.
-- **Búsqueda Multi-campo en Lista Rápida (`SubjectSelectionModal.tsx`):** Se amplió el filtro de búsqueda para permitir consultar por grupo (soporta "A" o "Grupo A"), sala y horarios semanales formateados en texto.
-- **Control global del toggle de prerrequisitos (`showAntecedentes`):** Permite desactivar (`OFF`) la validación de prerrequisitos para ocultar advertencias y permitir seleccionar asignaturas ya aprobadas sin atenuación ni bloqueos.
-- **Optimizaciones de Bundle Splitting en Vite (`vite.config.ts`):** Las librerías pesadas se separaron en chunks diferidos (`vendor-xlsx` para Excel y `vendor-pdf` para `jspdf` + `html-to-image`), mientras que `ColumnMappingDialog` se importa de forma perezosa (`React.lazy` + `Suspense`).
-- **Exportación Estilizada y Matricial (Excel `.xlsx` y `.csv`) (`ExportDropdown.tsx` / `export.ts`):** Menú desplegable en el Header para descargar el horario como archivo CSV en UTF-8 con BOM (`\ufeff`) para compatibilidad en Windows, o como un libro de Excel estilizado (`xlsx-js-style`) con 3 pestañas (*Materias Inscritas*, *Calendario Semanal* y *Lista de Sesiones*).
-- **Prevención de Asignaturas Duplicadas (`SubjectSelectionModal.tsx` / `DayColumn.tsx`):** Al seleccionar un grupo de una asignatura, los demás grupos de la misma materia en horarios no empalmados se inhabilitan automáticamente mostrando la leyenda *"Ya seleccionada"*.
-- **Gestión de Capas e Interacción Móvil con CSS `:has()` (`DayColumn.tsx` / `ActivityCard.tsx`):** Corrección de solapamiento de profundidad (`z-index`) mediante `has-[.active-card]:z-[60]`.
-- **Sistema de Tutorial Guiado e Interactivo (`TourOrchestrator.tsx` / `TourSpotlight.tsx` / `tourStorage.ts`):** Tutorial guiado en 3 etapas secuenciales (`welcome`, `loaded`, `color`), detección de elementos visibles y apertura responsiva del drawer.
+- **Ajuste Fino de Elevación Hover y Posicionamiento Portaled (`ActivityCard.tsx` / `DayColumn.tsx`):** Unificación de la elevación z-index de tarjetas a `z-[60]` (`has-[.active-card]:z-[60]`). Tooltips y popovers de color se renderizan mediante portales (`React.createPortal`) fuera del flujo CSS con cálculo dinámico para abrir hacia arriba si el espacio inferior es reducido.
+- **Gestión Accesible de Cierre de Menú de Celdas (`Calendar.tsx` / `DayColumn.tsx`):** Elevación del estado `activeCell` a `Calendar.tsx` con backdrop transparente (`fixed inset-0 z-[60]`) que intercepta cualquier toque externo para cerrar desplegables sin activar celdas no deseadas, botón `X` de cierre y soporte para tecla `Escape`.
+- **Botón Flotante de Acción Rápida (FAB) con Detección de Scroll (`App.tsx`):** Integración de un botón flotante desplegable para abrir `SubjectSelectionModal` que colapsa al deslizar hacia abajo y se expande al deslizar hacia arriba.
+- **Exportación a PDF Nativa y Vectorial en 2 Páginas (`exportToPDF`):** Descarga directa de PDF en formato A4 landscape. Utiliza `.exporting-mode` para captura a 2x resolución (Página 1) y genera una tabla vectorial estilizada usando `jspdf-autotable` (Página 2) con totales y separadores visuales.
+- **Exportación a Calendario iCalendar (`.ics`):** Módulo de generación de archivos de calendario `.ics` (`exportToICS` / `generateICSContent`) con eventos recurrentes semanales (`RRULE:FREQ=WEEKLY`), UIDs únicos y descripción estructurada.
+- **Modo de Impresión Nativo (`window.print()`):** Opción "Imprimir" en `ExportDropdown.tsx` con reglas `@media print` dedicadas en `index.css`: `@page { margin: 5mm; size: landscape; }`, anulación de `height: 100vh` y `overflow: hidden`, e higiene de márgenes.
+- **Captura Visual Limpia sin Truncamiento (`.exporting-mode`):** Reglas CSS que anulan `truncate` transformándolo en `white-space: normal !important` durante la captura de pantalla para PNG y PDF página 1, ocultando activadores de edición y botones de eliminación.
+- **Pipeline de Mapeo Continuo para Excel Multilámina (`pendingSheetQueue`):** Encolado automático de hojas pendientes que requieren mapeo interactivo de columnas en `pendingSheetQueue` con subtítulo `"Hoja: NombreHoja"`.
+- **Mapeo dinámico e interactivo de columnas CSV (`ColumnMappingDialog.tsx`):** Detección interactiva de columnas no estándar con persistencia de firmas en `localStorage` usando `@radix-ui/react-select` animado.
+- **Inferencia automática de créditos entre filas (`csv.ts`):** Propagación automática de créditos conocidos entre filas de una misma asignatura cuando alguna fila viene vacía.
+- **Sustitución de modales y avisos nativos por `<ConfirmDialog />`:** Sustitución de `window.confirm` por un modal con variantes de peligro, advertencia e información.
+- **Búsqueda Multi-campo en Lista Rápida (`SubjectSelectionModal.tsx`):** Búsqueda por grupo, sala, profesor y horario formateado en texto.
+- **Control global del toggle de prerrequisitos (`showAntecedentes`):** Interruptor global `ON`/`OFF` para activar/desactivar la validación de prerrequisitos.
+- **Optimizaciones de Bundle Splitting en Vite (`vite.config.ts`):** Separación de chunks diferidos (`vendor-xlsx`, `vendor-pdf`) e importación perezosa (`React.lazy`) de modales.
 
 ---
 
 ## 7. Pendientes / incompleto
 
 - **Comentarios TODO / FIXME en el código:** No existen comentarios `TODO` o `FIXME` pendientes en el código fuente actual.
-- **Estado de cobertura funcional:** Todas las características esenciales (carga de CSV/Excel, mapeo interactivo de columnas por hoja, tutorial guiado paso a paso, calendario 7-21h, filtrado por celda, prevención de conflictos, prerrequisitos, exportación a PDF directo en 2 páginas, impresión nativa `window.print()`, PNG limpio, Excel `.xlsx`, `.ics` iCalendar, CSV en UTF-8 con BOM y persistencia en `localStorage`) se encuentran 100% completadas y operativas.
+- **Estado de cobertura funcional:** Todas las características esenciales (carga de CSV/Excel, adición/edición manual de materias, mapeo interactivo por hoja, tutorial guiado paso a paso, calendario 7-21h, filtrado por celda, prevención de conflictos, prerrequisitos con switch pill, exportación a PDF directo en 2 páginas, impresión nativa `window.print()`, PNG limpio, Excel `.xlsx`, `.ics` iCalendar, CSV en UTF-8 con BOM y persistencia en `localStorage`) se encuentran 100% completadas y operativas.
 - **Próximas funciones a implementar / extensiones:**
   - Algoritmos de generación automática de combinaciones sin traslapes (planificador automático).
 
@@ -413,10 +415,8 @@ node scratch/test_uploader_accessibility.mjs
 node scratch/test_excel.mjs
 node scratch/test_matrix_excel.mjs
 node scratch/test_pdf_export_flow.mjs
+node scratch/test_manual_activities.mjs
+node scratch/verify_components.mjs
 node scratch/test-export.mjs
 node scratch/analyze_report.mjs
 ```
-
----
-
-## 9. Elementos sin deploy
