@@ -50,22 +50,31 @@ interface TimeSelectInputProps {
 
 function TimeSelectInput({ value, placeholder, onChange, isInvalid, openUpward = false }: TimeSelectInputProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const selectedOptionRef = useRef<HTMLDivElement>(null);
 
-  const filteredOptions = TIME_OPTIONS.filter(opt =>
-    opt.toLowerCase().includes(value.trim().toLowerCase())
-  );
-  const displayOptions = filteredOptions.length > 0 ? filteredOptions : TIME_OPTIONS;
+  const displayOptions = isSearching && searchQuery.trim() !== ''
+    ? TIME_OPTIONS.filter(opt => opt.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : TIME_OPTIONS;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setIsSearching(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && selectedOptionRef.current) {
+      selectedOptionRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isOpen]);
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -73,15 +82,23 @@ function TimeSelectInput({ value, placeholder, onChange, isInvalid, openUpward =
         type="text"
         placeholder={placeholder}
         value={value}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          setIsSearching(false);
+          setSearchQuery('');
+          setIsOpen(true);
+        }}
         onChange={(e) => {
-          onChange(e.target.value);
+          const newVal = e.target.value;
+          onChange(newVal);
+          setSearchQuery(newVal);
+          setIsSearching(true);
           setIsOpen(true);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Escape' && isOpen) {
             e.stopPropagation();
             setIsOpen(false);
+            setIsSearching(false);
           }
         }}
         className={`w-full bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg px-2.5 py-1.5 text-xs outline-none transition-all ${
@@ -95,23 +112,34 @@ function TimeSelectInput({ value, placeholder, onChange, isInvalid, openUpward =
         <div className={`absolute left-0 w-full max-h-36 overflow-y-auto bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl z-[250] py-1 select-none ${
           openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
         }`}>
-          {displayOptions.map((opt) => (
-            <div
-              key={opt}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onChange(opt);
-                setIsOpen(false);
-              }}
-              className={`px-3 py-1 text-xs cursor-pointer transition-colors ${
-                value === opt
-                  ? 'bg-[var(--color-primary)] text-white font-medium'
-                  : 'text-[var(--text-main)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)]'
-              }`}
-            >
-              {opt}
+          {displayOptions.length > 0 ? (
+            displayOptions.map((opt) => {
+              const isSelected = value === opt;
+              return (
+                <div
+                  key={opt}
+                  ref={isSelected ? selectedOptionRef : undefined}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(opt);
+                    setIsOpen(false);
+                    setIsSearching(false);
+                  }}
+                  className={`px-3 py-1 text-xs cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-[var(--color-primary)] text-white font-medium'
+                      : 'text-[var(--text-main)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)]'
+                  }`}
+                >
+                  {opt}
+                </div>
+              );
+            })
+          ) : (
+            <div className="px-3 py-1.5 text-xs text-[var(--text-muted)] text-center">
+              No hay coincidencias
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
@@ -419,7 +447,7 @@ export function ManualActivityFormModal({
                   className="w-full border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-main)] rounded-lg px-2.5 py-1.5 text-xs focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] outline-none transition-all resize-none"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  Si esta actividad tiene requisitos, escríbelos como texto libre (ej. '1 antecedente: Nombre de la materia').
+                  Si esta actividad tiene requisitos, escríbelos como texto libre (ej. '1 antecedente: Nombre de la actividad').
                 </p>
               </div>
 

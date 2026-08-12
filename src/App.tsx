@@ -382,7 +382,7 @@ export default function App() {
     setConfirmState({
       isOpen: true,
       title: `¿Eliminar '${activity.asignatura}'?`,
-      message: 'Esta asignatura personalizada será eliminada de tu lista y del calendario si estaba seleccionada.',
+      message: 'Esta actividad personalizada será eliminada de tu lista y del calendario si estaba seleccionada.',
       variant: 'danger',
       onConfirm: () => {
         setManualActivities(prev => prev.filter(a => a.id !== activity.id));
@@ -832,12 +832,12 @@ export default function App() {
               )}
             </div>
 
-            {/* Materias Manuales */}
+            {/* Actividades Personalizadas */}
             <div>
               <div className="flex items-center justify-between mb-2.5">
                 <h3 className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider flex items-center space-x-1.5">
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span>Materias Personalizadas ({manualActivities.length})</span>
+                  <span>Actividades Personalizadas ({manualActivities.length})</span>
                 </h3>
                 <button
                   onClick={handleOpenCreateManualActivity}
@@ -879,14 +879,14 @@ export default function App() {
                         <button
                           onClick={() => handleOpenEditManualActivity(activity)}
                           className="text-[var(--text-muted)] hover:text-[var(--text-main)] p-1 rounded transition-colors"
-                          title="Editar materia"
+                          title="Editar actividad"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteManualActivity(activity)}
                           className="text-[var(--text-muted)] hover:text-[var(--color-danger)] p-1 rounded transition-colors"
-                          title="Eliminar materia"
+                          title="Eliminar actividad"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -897,7 +897,7 @@ export default function App() {
               ) : (
                 <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-app)] border border-[var(--border-subtle)] p-3 rounded-lg flex items-center space-x-2">
                   <BookOpen className="w-4 h-4 shrink-0 opacity-50" />
-                  <span>Sin materias personalizadas</span>
+                  <span>Sin actividades personalizadas</span>
                 </div>
               )}
             </div>
