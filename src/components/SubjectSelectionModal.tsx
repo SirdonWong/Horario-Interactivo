@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Search, Check, AlertTriangle } from 'lucide-react';
 import { Activity } from '../types';
-import { hasConflict, formatWeeklySchedules } from '../utils/time';
+import { activitiesConflict, formatWeeklySchedules } from '../utils/time';
 import { resolveMateriaId } from '../utils/curriculum';
 
 interface SubjectSelectionModalProps {
@@ -49,10 +49,6 @@ export function SubjectSelectionModal({
       set.add(key);
     });
     return set;
-  }, [selectedActivities]);
-
-  const allSelectedSchedules = useMemo(() => {
-    return selectedActivities.flatMap(a => a.schedules);
   }, [selectedActivities]);
 
   // Filter activities based on search term
@@ -140,7 +136,7 @@ export function SubjectSelectionModal({
                 const isSelected = selectedIds.has(activity.id);
                 const isOtraCatedraSeleccionada = !isSelected && selectedAsignaturas.has(materiaKey);
                 const isCompletada = showAntecedentes && materiasCompletadas.has(resolveMateriaId(activity.asignatura) || "");
-                const isConflicting = !isSelected && !isOtraCatedraSeleccionada && !isCompletada && hasConflict(activity.schedules, allSelectedSchedules);
+                const isConflicting = !isSelected && !isOtraCatedraSeleccionada && !isCompletada && selectedActivities.some(sel => activitiesConflict(activity, sel));
                 const scheduleText = formatWeeklySchedules(activity.schedules);
 
                 const isDisabled = isOtraCatedraSeleccionada || isConflicting || isCompletada;

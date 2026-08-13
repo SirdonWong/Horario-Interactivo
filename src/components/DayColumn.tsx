@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Activity, DayOfWeek, HOURS } from '../types';
-import { checkOverlap, hasConflict, formatTime, formatWeeklySchedules } from '../utils/time';
+import { Activity, DayOfWeek, HOURS, ActivitySchedule } from '../types';
+import { checkOverlap, activitiesConflict, formatTime, formatWeeklySchedules } from '../utils/time';
 import { ActivityCard } from './ActivityCard';
 import { cn } from '../lib/utils';
 import { getPendingPrerequisites, resolveMateriaId } from '../utils/curriculum';
@@ -24,6 +24,8 @@ interface DayColumnProps {
   onCellToggle: (day: DayOfWeek, hour: number, e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => void;
   onCloseCell: () => void;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
+  markAsyncEnabled: boolean;
+  onToggleAsync: (activityId: string, schedule: ActivitySchedule) => void;
 }
 
 export function DayColumn({
@@ -43,6 +45,8 @@ export function DayColumn({
   onCellToggle,
   onCloseCell,
   dropdownRef,
+  markAsyncEnabled,
+  onToggleAsync,
 }: DayColumnProps) {
 
   const selectedAsignaturas = useMemo(() => {
@@ -154,8 +158,7 @@ export function DayColumn({
                         const actKey = resolveMateriaId(act.asignatura) || act.asignatura.trim().toLowerCase();
                         const isApproved = showAntecedentes && materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
                         const isSameSubjectSelected = selectedAsignaturas.has(actKey);
-                        const selectedSchedules = selectedActivities.flatMap(sa => sa.schedules);
-                        const isConflict = !isSameSubjectSelected && hasConflict(act.schedules, selectedSchedules);
+                        const isConflict = !isSameSubjectSelected && selectedActivities.some(sel => activitiesConflict(act, sel));
                         const antecedentesPendientes = getPendingPrerequisites(act.asignatura, act.antecedentes, materiasCompletadas);
                         const weeklyScheduleText = formatWeeklySchedules(act.schedules);
 
@@ -236,6 +239,8 @@ export function DayColumn({
                 colorOverrides={colorOverrides}
                 onColorChange={onColorChange}
                 useColorfulMode={useColorfulMode}
+                markAsyncEnabled={markAsyncEnabled}
+                onToggleAsync={onToggleAsync}
               />
             </div>
           );

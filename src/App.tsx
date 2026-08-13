@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import { Activity, LoadedFile } from './types';
+import { Activity, LoadedFile, ActivitySchedule } from './types';
 import { Uploader, PendingMappingFile, processFileAfterMapping, processCsvFiles } from './components/Uploader';
 import { Calendar } from './components/Calendar';
 const ColumnMappingDialog = React.lazy(() => 
@@ -8,7 +8,7 @@ const ColumnMappingDialog = React.lazy(() =>
   )
 );
 import { ExcelSheetDialog } from './components/ExcelSheetDialog';
-import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle, Info, Plus, Edit3, BookOpen } from 'lucide-react';
+import { Download, FileSpreadsheet, Trash2, Sun, Moon, Calendar as CalendarIcon, RotateCcw, AlertTriangle, Loader2, Menu, X, GraduationCap, Palette, HelpCircle, Info, Plus, Edit3, BookOpen, Settings } from 'lucide-react';
 import { TourOrchestrator } from './components/TourOrchestrator';
 
 import { loadFromStorage, saveToStorage } from './utils/storage';
@@ -23,6 +23,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { SubjectSelectionModal } from './components/SubjectSelectionModal';
 import { ListPlus } from 'lucide-react';
 import { ExportDropdown } from './components/ExportDropdown';
+import { SettingsModal } from './components/SettingsModal';
 import { exportToExcel, exportToCSV, exportToICS, exportToPDF } from './utils/export';
 import { normalizeColorOverrideKey } from './utils/colors';
 
@@ -116,6 +117,11 @@ export default function App() {
   const [manualActivityModalState, setManualActivityModalState] = useState<{ mode: 'create' | 'edit'; activity?: Activity } | null>(null);
   const [manualActivityConflictWarning, setManualActivityConflictWarning] = useState<string | null>(null);
 
+  const [markAsyncEnabled, setMarkAsyncEnabled] = useState<boolean>(() =>
+    loadFromStorage<boolean>('markAsyncEnabled', false)
+  );
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
   const isFirstRender = React.useRef(true);
 
   useEffect(() => {
@@ -155,6 +161,11 @@ export default function App() {
     if (isFirstRender.current) return;
     saveToStorage('useColorfulMode', useColorfulMode);
   }, [useColorfulMode]);
+
+  useEffect(() => {
+    if (isFirstRender.current) return;
+    saveToStorage('markAsyncEnabled', markAsyncEnabled);
+  }, [markAsyncEnabled]);
 
   useEffect(() => {
     if (isFirstRender.current) return;
@@ -378,6 +389,21 @@ export default function App() {
     setManualActivityModalState(null);
   };
 
+  const handleToggleAsync = (activityId: string, schedule: ActivitySchedule) => {
+    setSelectedActivities(prev =>
+      prev.map(a =>
+        a.id !== activityId
+          ? a
+          : {
+              ...a,
+              schedules: a.schedules.map(s =>
+                s === schedule ? { ...s, isAsync: !s.isAsync } : s
+              ),
+            }
+      )
+    );
+  };
+
   const handleDeleteManualActivity = (activity: Activity) => {
     setConfirmState({
       isOpen: true,
@@ -553,7 +579,8 @@ export default function App() {
     isPrerequisiteModalOpen ||
     confirmState !== null ||
     isSubjectModalOpen ||
-    manualActivityModalState !== null;
+    manualActivityModalState !== null ||
+    isSettingsModalOpen;
 
   return (
     <div className="flex flex-col h-screen w-full max-w-[100vw] bg-[var(--bg-app)] text-[var(--text-main)] font-sans overflow-hidden transition-colors duration-200 print-app-root">
@@ -623,6 +650,16 @@ export default function App() {
             aria-label="Ver tutorial"
           >
             <HelpCircle className="w-5 h-5 sm:w-4 sm:h-4" />
+          </button>
+
+          {/* Settings Button (desktop only) */}
+          <button
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="hidden sm:flex p-2 sm:p-0 sm:w-8 sm:h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-strong)] transition-all items-center justify-center"
+            title="Configuración"
+            aria-label="Configuración"
+          >
+            <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
 
           {/* Theme Toggle Button */}
@@ -724,6 +761,15 @@ export default function App() {
               className="w-full text-left text-xs font-medium text-[var(--color-primary)] p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:border-[var(--border-strong)] transition-all"
             >
               Ver tutorial de nuevo
+            </button>
+            <button
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                setIsSettingsModalOpen(true);
+              }}
+              className="w-full text-left text-xs font-medium text-[var(--text-main)] p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-app)] hover:border-[var(--border-strong)] transition-all"
+            >
+              Configuración
             </button>
           </div>
 
@@ -949,6 +995,8 @@ export default function App() {
               onColorChange={handleColorChange}
               useColorfulMode={useColorfulMode}
               onScroll={handleCalendarScroll}
+              markAsyncEnabled={markAsyncEnabled}
+              onToggleAsync={handleToggleAsync}
             />
           )}
         </main>
@@ -1123,6 +1171,13 @@ export default function App() {
         colorIndex={manualActivities.length}
         onSave={handleSaveManualActivity}
         onCancel={() => setManualActivityModalState(null)}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        markAsyncEnabled={markAsyncEnabled}
+        onToggleMarkAsync={() => setMarkAsyncEnabled(prev => !prev)}
       />
     </div>
 

@@ -12,6 +12,7 @@ export interface TimeRange {
 export interface ActivitySchedule {
   day: DayOfWeek;
   timeRange: TimeRange;
+  isAsync?: boolean; // true si esta sesión específica es asíncrona/trabajo en plataforma
 }
 
 export interface LoadedFile {

@@ -1,4 +1,4 @@
-import { TimeRange, ActivitySchedule, DayOfWeek } from '../types';
+import { TimeRange, ActivitySchedule, DayOfWeek, Activity } from '../types';
 
 /**
  * Normaliza y limpia una cadena de texto que contiene horarios.
@@ -193,4 +193,39 @@ export function formatWeeklySchedules(schedules: ActivitySchedule[]): string {
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Determina si una actividad está exenta de conflictos de horario cuando la
+ * sesión que choca contra ella es asíncrona. Están exentas las Actividades
+ * Personalizadas (id con prefijo "manual:") y las materias con modalidad
+ * "Libre" (comparación insensible a mayúsculas/minúsculas).
+ */
+export function isConflictExemptActivity(activity: Activity): boolean {
+  if (activity.id.startsWith('manual:')) return true;
+  return activity.modalidad.trim().toLowerCase() === 'libre';
+}
+
+/**
+ * Compara dos actividades completas (no arrays de horarios sueltos) y
+ * determina si tienen un traslape real, considerando las excepciones de
+ * sesiones asíncronas. Una sesión marcada isAsync exime el traslape
+ * ÚNICAMENTE si la otra actividad involucrada es una Actividad Personalizada
+ * o tiene modalidad "Libre" — no exime traslapes entre dos materias
+ * normales de facultad aunque ambas estén marcadas como asíncronas.
+ */
+export function activitiesConflict(a: Activity, b: Activity): boolean {
+  for (const sA of a.schedules) {
+    for (const sB of b.schedules) {
+      if (sA.day !== sB.day) continue;
+      if (!checkOverlap(sA.timeRange, sB.timeRange)) continue;
+
+      const exempt =
+        (sA.isAsync === true && isConflictExemptActivity(b)) ||
+        (sB.isAsync === true && isConflictExemptActivity(a));
+
+      if (!exempt) return true;
+    }
+  }
+  return false;
 }
