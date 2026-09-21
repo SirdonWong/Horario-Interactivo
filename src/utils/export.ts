@@ -1,5 +1,5 @@
 import { Activity } from '../types';
-import { formatTime } from './time';
+import { formatTime, formatWeeklySchedulesWithAsync } from './time';
 
 const DAYS_ORDER: Record<string, number> = {
   Lunes: 1,
@@ -43,7 +43,7 @@ export function getMateriasExportData(activities: Activity[]) {
     'Créditos': act.creditos || '-',
     'Modalidad': act.modalidad || '-',
     'Sala': act.sala || '-',
-    'Horario Semanal': act.horarioTexto || '-',
+    'Horario Semanal': formatWeeklySchedulesWithAsync(act.schedules) || '-',
   }));
 }
 
@@ -56,6 +56,7 @@ export function getAgendaExportData(activities: Activity[]) {
     'Día': string;
     'Hora Inicio': string;
     'Hora Fin': string;
+    'Asíncrona': string;
     'Asignatura': string;
     'Grupo': string;
     'Profesor': string;
@@ -72,6 +73,7 @@ export function getAgendaExportData(activities: Activity[]) {
           'Día': sch.day,
           'Hora Inicio': formatTime(sch.timeRange.start),
           'Hora Fin': formatTime(sch.timeRange.end),
+          'Asíncrona': sch.isAsync ? 'Sí' : 'No',
           'Asignatura': act.asignatura || '',
           'Grupo': act.grupo || '',
           'Profesor': act.profesor || 'Por asignar',
@@ -87,6 +89,7 @@ export function getAgendaExportData(activities: Activity[]) {
         'Día': 'Sin horario asignado',
         'Hora Inicio': '-',
         'Hora Fin': '-',
+        'Asíncrona': 'No',
         'Asignatura': act.asignatura || '',
         'Grupo': act.grupo || '',
         'Profesor': act.profesor || 'Por asignar',
@@ -526,13 +529,17 @@ export function generateICSContent(activities: Activity[]): string {
       const safeId = (act.id || 'act').replace(/[^a-zA-Z0-9-]/g, '-');
       const uid = `event-${safeId}-${sch.day}-${eventIndex}@horario-interactivo.local`;
 
-      const description = [
+      const descriptionParts = [
         `Modalidad: ${act.modalidad || 'N.A.'}`,
         `Grupo: ${act.grupo || 'N.A.'}`,
         `Créditos: ${act.creditos || 'N.A.'}`,
         `Profesor: ${act.profesor || 'Sin asignar'}`,
         `Sala: ${act.sala || 'Por definir'}`,
-      ].join(' | ');
+      ];
+      if (sch.isAsync) {
+        descriptionParts.push('Asíncrona: Sí');
+      }
+      const description = descriptionParts.join(' | ');
 
       rawLines.push(
         'BEGIN:VEVENT',
@@ -726,7 +733,7 @@ export async function exportToPDF(activities: Activity[], filename = 'horario_in
       act.grupo,
       act.creditos || '-',
       act.profesor || '-',
-      act.horarioTexto || '-',
+      formatWeeklySchedulesWithAsync(act.schedules) || '-',
       act.sala || '-'
     ]);
 

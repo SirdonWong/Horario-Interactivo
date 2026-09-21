@@ -13,7 +13,7 @@ import { TourOrchestrator } from './components/TourOrchestrator';
 
 import { loadFromStorage, saveToStorage } from './utils/storage';
 import { loadManualActivities, saveManualActivities } from './utils/manualActivities';
-import { hasConflict } from './utils/time';
+import { hasConflict, formatWeeklySchedulesWithAsync } from './utils/time';
 import { ManualActivityFormModal } from './components/ManualActivityFormModal';
 import { PrerequisiteChecklist } from './components/PrerequisiteChecklist';
 import { ColumnMapping, fingerprintHeaders } from './utils/columnMapping';
@@ -1154,7 +1154,7 @@ export default function App() {
                     <td style={{ padding: '8px 12px' }}>{act.grupo}</td>
                     <td style={{ padding: '8px 12px' }}>{act.creditos || '-'}</td>
                     <td style={{ padding: '8px 12px' }}>{act.profesor || '-'}</td>
-                    <td style={{ padding: '8px 12px' }}>{act.horarioTexto || '-'}</td>
+                    <td style={{ padding: '8px 12px' }}>{formatWeeklySchedulesWithAsync(act.schedules) || '-'}</td>
                     <td style={{ padding: '8px 12px' }}>{act.sala || '-'}</td>
                   </tr>
                 ))}
