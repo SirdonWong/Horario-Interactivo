@@ -229,3 +229,111 @@ export function activitiesConflict(a: Activity, b: Activity): boolean {
   }
   return false;
 }
+
+export interface ScheduleGroupItem {
+  activity: Activity;
+  schedule: ActivitySchedule;
+}
+
+/**
+ * Agrupa sesiones de UN MISMO DÍA por conectividad de solape: si A choca con
+ * B, y B choca con C, los tres quedan en el mismo grupo aunque A y C no
+ * choquen directamente entre sí. Asume que TODOS los items ya pertenecen al
+ * mismo día — quien llama a esta función es responsable de filtrar por día
+ * antes de invocarla; esta función no compara el campo `day` en absoluto,
+ * solo timeRange.
+ */
+export function groupOverlappingActivities(items: ScheduleGroupItem[]): ScheduleGroupItem[][] {
+  const n = items.length;
+  const parent = Array.from({ length: n }, (_, i) => i);
+
+  function find(i: number): number {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+
+  function union(i: number, j: number) {
+    const ri = find(i);
+    const rj = find(j);
+    if (ri !== rj) parent[ri] = rj;
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (checkOverlap(items[i].schedule.timeRange, items[j].schedule.timeRange)) {
+        union(i, j);
+      }
+    }
+  }
+
+  const groupsMap = new Map<number, ScheduleGroupItem[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!groupsMap.has(root)) groupsMap.set(root, []);
+    groupsMap.get(root)!.push(items[i]);
+  }
+
+  return Array.from(groupsMap.values());
+}
+
+/**
+ * Dado un grupo (ya agrupado por groupOverlappingActivities), calcula el
+ * rango de tiempo total que cubre: desde el inicio más temprano hasta el
+ * fin más tardío de todas las sesiones del grupo.
+ */
+export function getGroupTimeSpan(group: ScheduleGroupItem[]): { start: number; end: number } {
+  let start = Infinity;
+  let end = -Infinity;
+  for (const item of group) {
+    start = Math.min(start, item.schedule.timeRange.start);
+    end = Math.max(end, item.schedule.timeRange.end);
+  }
+  return { start, end };
+}
+
+/**
+ * Igual que formatWeeklySchedules, pero NO agrupa sesiones que tengan el
+ * mismo horario si una es asíncrona y la otra no (evita que una sesión
+ * async "contamine" la etiqueta de una sync que coincide en horario), y
+ * agrega el sufijo " (Asíncrona)" a los grupos donde isAsync sea true.
+ */
+export function formatWeeklySchedulesWithAsync(schedules: ActivitySchedule[]): string {
+  if (!schedules || schedules.length === 0) return '';
+
+  const groupsByKey = new Map<string, { days: DayOfWeek[]; timeStr: string; isAsync: boolean }>();
+
+  for (const s of schedules) {
+    const timeStr = `${formatTime(s.timeRange.start)}-${formatTime(s.timeRange.end)}`;
+    const isAsync = s.isAsync === true;
+    const key = `${timeStr}::${isAsync}`;
+    if (!groupsByKey.has(key)) {
+      groupsByKey.set(key, { days: [], timeStr, isAsync });
+    }
+    const group = groupsByKey.get(key)!;
+    if (!group.days.includes(s.day)) {
+      group.days.push(s.day);
+    }
+  }
+
+  const parts: string[] = [];
+
+  for (const { days, timeStr, isAsync } of groupsByKey.values()) {
+    let daysStr = '';
+    if (days.length === 1) {
+      daysStr = days[0];
+    } else if (days.length === 2) {
+      daysStr = `${days[0]} y ${days[1]}`;
+    } else {
+      const last = days[days.length - 1];
+      const rest = days.slice(0, days.length - 1).join(', ');
+      daysStr = `${rest} y ${last}`;
+    }
+    const suffix = isAsync ? ' (Asíncrona)' : '';
+    parts.push(`${daysStr} ${timeStr}${suffix}`);
+  }
+
+  return parts.join(', ');
+}
