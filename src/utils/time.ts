@@ -337,3 +337,74 @@ export function formatWeeklySchedulesWithAsync(schedules: ActivitySchedule[]): s
 
   return parts.join(', ');
 }
+
+export interface MatrixCellPlacement {
+  activity: Activity;
+  schedule: ActivitySchedule;
+  /** 0 = ocupa ambas sub-columnas del día (fusionadas); 1 = sub-columna izquierda; 2 = sub-columna derecha */
+  subColumn: 0 | 1 | 2;
+  /** Rango vertical a fusionar en la hoja: el del grupo completo, no el individual de esta actividad */
+  spanStart: number;
+  spanEnd: number;
+  /** Texto reducido: true = solo nombre + sala; false = nombre + grupo + sala completo */
+  useShortText: boolean;
+}
+
+/**
+ * Calcula, para UN MISMO DÍA, cómo debe distribuirse cada actividad entre
+ * las 2 sub-columnas de ese día en la hoja matriz de Excel, según las
+ * reglas acordadas:
+ * - Grupo de 1 actividad: subColumn 0 (fusiona ambas sub-columnas), texto completo.
+ * - Grupo de exactamente 2: cada una en su propia sub-columna (1 y 2), ambas
+ *   con el mismo spanStart/spanEnd (el del grupo completo, vía getGroupTimeSpan).
+ *   Texto completo si la duración del GRUPO (spanEnd - spanStart) es >= 120
+ *   minutos; si no, texto corto.
+ * - Grupo de 3 o más: subColumn 0 (fusiona ambas sub-columnas), texto SIEMPRE
+ *   corto, todas comparten el mismo spanStart/spanEnd del grupo.
+ */
+export function computeMatrixCellPlacements(itemsForDay: ScheduleGroupItem[]): MatrixCellPlacement[] {
+  const groups = groupOverlappingActivities(itemsForDay);
+  const placements: MatrixCellPlacement[] = [];
+
+  for (const group of groups) {
+    const span = getGroupTimeSpan(group);
+
+    if (group.length === 1) {
+      const { activity, schedule } = group[0];
+      placements.push({
+        activity,
+        schedule,
+        subColumn: 0,
+        spanStart: span.start,
+        spanEnd: span.end,
+        useShortText: false,
+      });
+    } else if (group.length === 2) {
+      const groupDuration = span.end - span.start;
+      const useShortText = groupDuration < 120;
+      group.forEach((item, index) => {
+        placements.push({
+          activity: item.activity,
+          schedule: item.schedule,
+          subColumn: index === 0 ? 1 : 2,
+          spanStart: span.start,
+          spanEnd: span.end,
+          useShortText,
+        });
+      });
+    } else {
+      for (const item of group) {
+        placements.push({
+          activity: item.activity,
+          schedule: item.schedule,
+          subColumn: 0,
+          spanStart: span.start,
+          spanEnd: span.end,
+          useShortText: true,
+        });
+      }
+    }
+  }
+
+  return placements;
+}
