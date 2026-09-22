@@ -265,11 +265,11 @@ export function DayColumn({
                 height: `${heightPercent}%`,
               }}
             >
-              <div className="flex flex-col h-full w-full gap-0.5 border-2 border-[var(--color-danger)] rounded-md overflow-hidden">
+              <div className="flex flex-col h-full w-full gap-0.5 border-2 border-[var(--color-danger)] rounded-md overflow-y-auto overflow-x-hidden">
                 {group.map(({ activity, schedule }) => (
                   <div
                     key={`${activity.id}::${schedule.day}::${schedule.timeRange.start}::${schedule.timeRange.end}`}
-                    className="flex-1 min-h-0"
+                    className="flex-1 min-h-[58px]"
                   >
                     <ActivityCard
                       activity={activity}
