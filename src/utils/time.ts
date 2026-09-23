@@ -1,4 +1,4 @@
-import { TimeRange, ActivitySchedule, DayOfWeek } from '../types';
+import { TimeRange, ActivitySchedule, DayOfWeek, Activity } from '../types';
 
 /**
  * Normaliza y limpia una cadena de texto que contiene horarios.
@@ -193,4 +193,218 @@ export function formatWeeklySchedules(schedules: ActivitySchedule[]): string {
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Determina si una actividad está exenta de conflictos de horario cuando la
+ * sesión que choca contra ella es asíncrona. Están exentas las Actividades
+ * Personalizadas (id con prefijo "manual:") y las materias con modalidad
+ * "Libre" (comparación insensible a mayúsculas/minúsculas).
+ */
+export function isConflictExemptActivity(activity: Activity): boolean {
+  if (activity.id.startsWith('manual:')) return true;
+  return activity.modalidad.trim().toLowerCase() === 'libre';
+}
+
+/**
+ * Compara dos actividades completas (no arrays de horarios sueltos) y
+ * determina si tienen un traslape real, considerando las excepciones de
+ * sesiones asíncronas. Una sesión marcada isAsync exime el traslape
+ * ÚNICAMENTE si la otra actividad involucrada es una Actividad Personalizada
+ * o tiene modalidad "Libre" — no exime traslapes entre dos materias
+ * normales de facultad aunque ambas estén marcadas como asíncronas.
+ */
+export function activitiesConflict(a: Activity, b: Activity): boolean {
+  for (const sA of a.schedules) {
+    for (const sB of b.schedules) {
+      if (sA.day !== sB.day) continue;
+      if (!checkOverlap(sA.timeRange, sB.timeRange)) continue;
+
+      const exempt =
+        (sA.isAsync === true && isConflictExemptActivity(b)) ||
+        (sB.isAsync === true && isConflictExemptActivity(a));
+
+      if (!exempt) return true;
+    }
+  }
+  return false;
+}
+
+export interface ScheduleGroupItem {
+  activity: Activity;
+  schedule: ActivitySchedule;
+}
+
+/**
+ * Agrupa sesiones de UN MISMO DÍA por conectividad de solape: si A choca con
+ * B, y B choca con C, los tres quedan en el mismo grupo aunque A y C no
+ * choquen directamente entre sí. Asume que TODOS los items ya pertenecen al
+ * mismo día — quien llama a esta función es responsable de filtrar por día
+ * antes de invocarla; esta función no compara el campo `day` en absoluto,
+ * solo timeRange.
+ */
+export function groupOverlappingActivities(items: ScheduleGroupItem[]): ScheduleGroupItem[][] {
+  const n = items.length;
+  const parent = Array.from({ length: n }, (_, i) => i);
+
+  function find(i: number): number {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+
+  function union(i: number, j: number) {
+    const ri = find(i);
+    const rj = find(j);
+    if (ri !== rj) parent[ri] = rj;
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (checkOverlap(items[i].schedule.timeRange, items[j].schedule.timeRange)) {
+        union(i, j);
+      }
+    }
+  }
+
+  const groupsMap = new Map<number, ScheduleGroupItem[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!groupsMap.has(root)) groupsMap.set(root, []);
+    groupsMap.get(root)!.push(items[i]);
+  }
+
+  return Array.from(groupsMap.values());
+}
+
+/**
+ * Dado un grupo (ya agrupado por groupOverlappingActivities), calcula el
+ * rango de tiempo total que cubre: desde el inicio más temprano hasta el
+ * fin más tardío de todas las sesiones del grupo.
+ */
+export function getGroupTimeSpan(group: ScheduleGroupItem[]): { start: number; end: number } {
+  let start = Infinity;
+  let end = -Infinity;
+  for (const item of group) {
+    start = Math.min(start, item.schedule.timeRange.start);
+    end = Math.max(end, item.schedule.timeRange.end);
+  }
+  return { start, end };
+}
+
+/**
+ * Igual que formatWeeklySchedules, pero NO agrupa sesiones que tengan el
+ * mismo horario si una es asíncrona y la otra no (evita que una sesión
+ * async "contamine" la etiqueta de una sync que coincide en horario), y
+ * agrega el sufijo " (Asíncrona)" a los grupos donde isAsync sea true.
+ */
+export function formatWeeklySchedulesWithAsync(schedules: ActivitySchedule[]): string {
+  if (!schedules || schedules.length === 0) return '';
+
+  const groupsByKey = new Map<string, { days: DayOfWeek[]; timeStr: string; isAsync: boolean }>();
+
+  for (const s of schedules) {
+    const timeStr = `${formatTime(s.timeRange.start)}-${formatTime(s.timeRange.end)}`;
+    const isAsync = s.isAsync === true;
+    const key = `${timeStr}::${isAsync}`;
+    if (!groupsByKey.has(key)) {
+      groupsByKey.set(key, { days: [], timeStr, isAsync });
+    }
+    const group = groupsByKey.get(key)!;
+    if (!group.days.includes(s.day)) {
+      group.days.push(s.day);
+    }
+  }
+
+  const parts: string[] = [];
+
+  for (const { days, timeStr, isAsync } of groupsByKey.values()) {
+    let daysStr = '';
+    if (days.length === 1) {
+      daysStr = days[0];
+    } else if (days.length === 2) {
+      daysStr = `${days[0]} y ${days[1]}`;
+    } else {
+      const last = days[days.length - 1];
+      const rest = days.slice(0, days.length - 1).join(', ');
+      daysStr = `${rest} y ${last}`;
+    }
+    const suffix = isAsync ? ' (Asíncrona)' : '';
+    parts.push(`${daysStr} ${timeStr}${suffix}`);
+  }
+
+  return parts.join(', ');
+}
+
+export interface MatrixCellPlacement {
+  activity: Activity;
+  schedule: ActivitySchedule;
+  /** 0 = ocupa ambas sub-columnas del día (fusionadas); 1 = sub-columna izquierda; 2 = sub-columna derecha */
+  subColumn: 0 | 1 | 2;
+  /** Rango vertical a fusionar en la hoja: el del grupo completo, no el individual de esta actividad */
+  spanStart: number;
+  spanEnd: number;
+  /** Texto reducido: true = solo nombre + sala; false = nombre + grupo + sala completo */
+  useShortText: boolean;
+}
+
+/**
+ * Calcula, para UN MISMO DÍA, cómo debe distribuirse cada actividad entre
+ * las 2 sub-columnas de ese día en la hoja matriz de Excel, según las
+ * reglas acordadas:
+ * - Grupo de 1 actividad: subColumn 0 (fusiona ambas sub-columnas), texto completo.
+ * - Grupo de exactamente 2: cada una en su propia sub-columna (1 y 2), ambas
+ *   con el mismo spanStart/spanEnd (el del grupo completo, vía getGroupTimeSpan).
+ *   Texto completo si la duración del GRUPO (spanEnd - spanStart) es >= 120
+ *   minutos; si no, texto corto.
+ * - Grupo de 3 o más: subColumn 0 (fusiona ambas sub-columnas), texto SIEMPRE
+ *   corto, todas comparten el mismo spanStart/spanEnd del grupo.
+ */
+export function computeMatrixCellPlacements(itemsForDay: ScheduleGroupItem[]): MatrixCellPlacement[] {
+  const groups = groupOverlappingActivities(itemsForDay);
+  const placements: MatrixCellPlacement[] = [];
+
+  for (const group of groups) {
+    const span = getGroupTimeSpan(group);
+
+    if (group.length === 1) {
+      const { activity, schedule } = group[0];
+      placements.push({
+        activity,
+        schedule,
+        subColumn: 0,
+        spanStart: span.start,
+        spanEnd: span.end,
+        useShortText: false,
+      });
+    } else if (group.length === 2) {
+      const groupDuration = span.end - span.start;
+      const useShortText = groupDuration < 120;
+      group.forEach((item, index) => {
+        placements.push({
+          activity: item.activity,
+          schedule: item.schedule,
+          subColumn: index === 0 ? 1 : 2,
+          spanStart: span.start,
+          spanEnd: span.end,
+          useShortText,
+        });
+      });
+    } else {
+      for (const item of group) {
+        placements.push({
+          activity: item.activity,
+          schedule: item.schedule,
+          subColumn: 0,
+          spanStart: span.start,
+          spanEnd: span.end,
+          useShortText: true,
+        });
+      }
+    }
+  }
+
+  return placements;
 }

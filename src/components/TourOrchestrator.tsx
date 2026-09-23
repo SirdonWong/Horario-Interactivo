@@ -268,6 +268,13 @@ export function TourOrchestrator({
 
   const activateStage = useCallback(
     (stageId: StageId, isManual: boolean = false) => {
+      // Auto-triggered stages are suppressed if the user has already seen them.
+      // Manual triggers always go through regardless.
+      if (!isManual) {
+        const stage = STAGES.find((s) => s.id === stageId);
+        if (stage && progressRef.current[stage.seenKey]) return;
+      }
+
       if (anyModalOpenRef.current) {
         pendingStageRef.current = stageId;
         isManualTriggerRef.current = isManual;
@@ -304,6 +311,14 @@ export function TourOrchestrator({
         const isManual = isManualTriggerRef.current;
         pendingStageRef.current = null;
         isManualTriggerRef.current = false;
+        // Guard: in StrictMode, effects run twice — the first run may enqueue
+        // a stage into pendingStageRef while anyModalOpen is already false,
+        // and the second run would consume it before activateStage's own guard
+        // can be reached cleanly. Checking here makes the barrier airtight.
+        if (!isManual) {
+          const stage = STAGES.find((s) => s.id === pending);
+          if (stage && progressRef.current[stage.seenKey]) return;
+        }
         activateStage(pending, isManual);
       } else if (activeStageId !== null) {
         resolveStep(
@@ -326,6 +341,10 @@ export function TourOrchestrator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ─── Stable ref for activateStage (avoids spurious effect re-fires) ──────
+  const activateStageRef = useRef(activateStage);
+  useEffect(() => { activateStageRef.current = activateStage; }, [activateStage]);
+
   // ─── Effect: "loaded" stage when available activities appear ───────────
 
   useEffect(() => {
@@ -333,11 +352,12 @@ export function TourOrchestrator({
     prevAvailableRef.current = hasAvailableActivities;
 
     if (!wasAvailable && hasAvailableActivities) {
-      if (!progressRef.current.loadedSeen) {
-        activateStage('loaded');
-      }
+      activateStageRef.current('loaded');
     }
-  }, [hasAvailableActivities, activateStage]);
+    // Intentionally omit activateStage from deps — we use a stable ref instead
+    // to avoid re-firing this effect every time callbacks are recreated.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAvailableActivities]);
 
   // ─── Effect: "color" stage when selected activities appear ─────────────
 
@@ -346,11 +366,11 @@ export function TourOrchestrator({
     prevSelectedRef.current = hasSelectedActivities;
 
     if (!wasSelected && hasSelectedActivities) {
-      if (!progressRef.current.colorSeen) {
-        activateStage('color');
-      }
+      activateStageRef.current('color');
     }
-  }, [hasSelectedActivities, activateStage]);
+    // Intentionally omit activateStage from deps — we use a stable ref instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelectedActivities]);
 
   // ─── Effect: manual trigger signal ─────────────────────────────────────
 

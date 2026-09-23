@@ -1,5 +1,5 @@
 import { Activity } from '../types';
-import { formatTime } from './time';
+import { formatTime, formatWeeklySchedulesWithAsync, ScheduleGroupItem, computeMatrixCellPlacements } from './time';
 
 const DAYS_ORDER: Record<string, number> = {
   Lunes: 1,
@@ -43,7 +43,7 @@ export function getMateriasExportData(activities: Activity[]) {
     'Créditos': act.creditos || '-',
     'Modalidad': act.modalidad || '-',
     'Sala': act.sala || '-',
-    'Horario Semanal': act.horarioTexto || '-',
+    'Horario Semanal': formatWeeklySchedulesWithAsync(act.schedules) || '-',
   }));
 }
 
@@ -56,6 +56,7 @@ export function getAgendaExportData(activities: Activity[]) {
     'Día': string;
     'Hora Inicio': string;
     'Hora Fin': string;
+    'Asíncrona': string;
     'Asignatura': string;
     'Grupo': string;
     'Profesor': string;
@@ -72,6 +73,7 @@ export function getAgendaExportData(activities: Activity[]) {
           'Día': sch.day,
           'Hora Inicio': formatTime(sch.timeRange.start),
           'Hora Fin': formatTime(sch.timeRange.end),
+          'Asíncrona': sch.isAsync ? 'Sí' : 'No',
           'Asignatura': act.asignatura || '',
           'Grupo': act.grupo || '',
           'Profesor': act.profesor || 'Por asignar',
@@ -87,6 +89,7 @@ export function getAgendaExportData(activities: Activity[]) {
         'Día': 'Sin horario asignado',
         'Hora Inicio': '-',
         'Hora Fin': '-',
+        'Asíncrona': 'No',
         'Asignatura': act.asignatura || '',
         'Grupo': act.grupo || '',
         'Profesor': act.profesor || 'Por asignar',
@@ -113,65 +116,68 @@ export function getAgendaExportData(activities: Activity[]) {
 /**
  * Genera la matriz visual del calendario para Excel.
  */
-function generateMatrixSheet(activities: Activity[], XLSX: any) {
+export function generateMatrixSheet(activities: Activity[], XLSX: any) {
   const startHour = 7;
   const endHour = 22;
   const intervalMins = 30;
-  
   const totalRows = ((endHour - startHour) * 60) / intervalMins;
-  
+  const totalCols = 1 + DAYS_ORDER_ARRAY.length * 2; // Hora + 2 sub-columnas por día
+
   const aoa: any[][] = [];
-  
-  // Fila 0: Encabezados
-  const headers = ['Hora', ...DAYS_ORDER_ARRAY];
-  aoa.push(headers);
-  
-  // Generar filas de tiempo (e.g. 07:00, 07:30, ...)
+
+  const headerRow = new Array(totalCols).fill('');
+  headerRow[0] = 'Hora';
+  DAYS_ORDER_ARRAY.forEach((day, d) => {
+    headerRow[1 + d * 2] = day;
+  });
+  aoa.push(headerRow);
+
   for (let i = 0; i < totalRows; i++) {
     const totalMins = startHour * 60 + i * intervalMins;
     const hour = Math.floor(totalMins / 60);
     const mins = totalMins % 60;
     const timeStr = `${hour.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-    
-    const row = new Array(8).fill('');
+    const row = new Array(totalCols).fill('');
     row[0] = timeStr;
     aoa.push(row);
   }
-  
+
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   if (!ws['!merges']) ws['!merges'] = [];
-  
-  // Aplicar estilos base
-  for (let c = 0; c < 8; c++) {
-    const cellRef = XLSX.utils.encode_cell({ c, r: 0 }); // Encabezados
+
+  DAYS_ORDER_ARRAY.forEach((_day, d) => {
+    const c = 1 + d * 2;
+    ws['!merges'].push({ s: { r: 0, c }, e: { r: 0, c: c + 1 } });
+  });
+
+  for (let c = 0; c < totalCols; c++) {
+    const cellRef = XLSX.utils.encode_cell({ c, r: 0 });
     if (ws[cellRef]) {
       ws[cellRef].s = {
-        fill: { fgColor: { rgb: "FF2DD4BF" } }, // Aguamarina (Teal 400)
-        font: { bold: true, color: { rgb: "FF0F172A" } }, // Texto oscuro
+        fill: { fgColor: { rgb: "FF2DD4BF" } },
+        font: { bold: true, color: { rgb: "FF0F172A" } },
         alignment: { vertical: "center", horizontal: "center" }
       };
     }
   }
-  
+
   for (let r = 1; r <= totalRows; r++) {
-    const cellRef = XLSX.utils.encode_cell({ c: 0, r }); // Columna de horas
+    const cellRef = XLSX.utils.encode_cell({ c: 0, r });
     if (ws[cellRef]) {
       ws[cellRef].s = {
-        fill: { fgColor: { rgb: "FFF1F5F9" } }, // slate-100
-        font: { bold: true, color: { rgb: "FF334155" } }, // slate-700
+        fill: { fgColor: { rgb: "FFF1F5F9" } },
+        font: { bold: true, color: { rgb: "FF334155" } },
         alignment: { vertical: "top", horizontal: "center" }
       };
     }
-    
-    // Borde sutil para las celdas de la grilla
-    for (let c = 1; c < 8; c++) {
+    for (let c = 1; c < totalCols; c++) {
       const cellRefData = XLSX.utils.encode_cell({ c, r });
       if (!ws[cellRefData]) {
-         ws[cellRefData] = { v: '', t: 's' };
+        ws[cellRefData] = { v: '', t: 's' };
       }
       ws[cellRefData].s = {
         border: {
-          top: { style: "hair", color: { rgb: "FFE2E8F0" } }, // slate-200
+          top: { style: "hair", color: { rgb: "FFE2E8F0" } },
           bottom: { style: "hair", color: { rgb: "FFE2E8F0" } },
           left: { style: "hair", color: { rgb: "FFE2E8F0" } },
           right: { style: "hair", color: { rgb: "FFE2E8F0" } }
@@ -180,73 +186,131 @@ function generateMatrixSheet(activities: Activity[], XLSX: any) {
     }
   }
 
-  // Llenar datos de actividades
-  activities.forEach(act => {
-    if (!act.schedules) return;
-    
-    const colorKey = act.color || 'default';
-    const excelColor = EXCEL_COLORS[colorKey] || EXCEL_COLORS.default;
-    
-    act.schedules.forEach(sch => {
-      const colIndex = DAYS_ORDER_ARRAY.indexOf(sch.day) + 1; // +1 porque la col 0 es 'Hora'
-      if (colIndex === 0) return; // Día no válido
-      
-      const startMins = sch.timeRange.start;
-      const endMins = sch.timeRange.end;
-      
-      // Filtrar horarios fuera del rango (7 a 22)
-      if (startMins < startHour * 60 || endMins > endHour * 60) return;
-      
-      const startRow = Math.floor((startMins - (startHour * 60)) / intervalMins) + 1;
-      const endRow = Math.ceil((endMins - (startHour * 60)) / intervalMins); // Inclusivo
-      
-      if (startRow > endRow) return;
-      
-      // Merge
-      ws['!merges'].push({ s: { r: startRow, c: colIndex }, e: { r: endRow, c: colIndex } });
-      
-      const text = `${act.asignatura}\n${act.grupo || ''}\n${act.sala || ''}`.trim();
-      const cellRef = XLSX.utils.encode_cell({ c: colIndex, r: startRow });
-      
+  const DANGER_BORDER = { style: "medium", color: { rgb: "FFDC2626" } };
+
+  DAYS_ORDER_ARRAY.forEach((day, d) => {
+    const leftCol = 1 + d * 2;
+    const rightCol = leftCol + 1;
+
+    const itemsForDay: ScheduleGroupItem[] = [];
+    activities.forEach(act => {
+      if (!act.schedules) return;
+      act.schedules.forEach(sch => {
+        if (sch.day === day) {
+          itemsForDay.push({ activity: act, schedule: sch });
+        }
+      });
+    });
+
+    if (itemsForDay.length === 0) return;
+
+    const placements = computeMatrixCellPlacements(itemsForDay);
+
+    const cellGroupsMap = new Map<string, typeof placements>();
+    for (const p of placements) {
+      const key = `${p.subColumn}::${p.spanStart}::${p.spanEnd}`;
+      if (!cellGroupsMap.has(key)) cellGroupsMap.set(key, []);
+      cellGroupsMap.get(key)!.push(p);
+    }
+
+    interface DayCellEntry {
+      subColumn: 0 | 1 | 2;
+      cellPlacements: typeof placements;
+      startRow: number;
+      baseEndRow: number;
+    }
+
+    const dayEntries: DayCellEntry[] = [];
+    for (const cellPlacements of cellGroupsMap.values()) {
+      const { subColumn, spanStart, spanEnd } = cellPlacements[0];
+      if (spanStart < startHour * 60 || spanEnd > endHour * 60) continue;
+
+      const startRow = Math.floor((spanStart - startHour * 60) / intervalMins) + 1;
+      const baseEndRow = Math.ceil((spanEnd - startHour * 60) / intervalMins);
+      if (startRow > baseEndRow) continue;
+
+      dayEntries.push({ subColumn, cellPlacements, startRow, baseEndRow });
+    }
+
+    dayEntries.sort((a, b) => a.startRow - b.startRow);
+
+    dayEntries.forEach((entry, idx) => {
+      const { subColumn, cellPlacements, startRow } = entry;
+      let endRow = entry.baseEndRow;
+
+      // Piso mínimo de filas SOLO para grupos de 3+ (cellPlacements.length > 1,
+      // que únicamente ocurre cuando computeMatrixCellPlacements devolvió
+      // varios placements con subColumn 0 compartiendo el mismo span): al
+      // menos una fila de 30 min por actividad del grupo. Nunca invade la
+      // siguiente celda ocupada de este mismo día (dayEntries ya está
+      // ordenado por startRow), y nunca reduce el tamaño natural que ya tenía
+      // el grupo antes de esta corrección.
+      if (cellPlacements.length > 1) {
+        const minRows = cellPlacements.length * 2;
+        const desiredEndRow = Math.max(entry.baseEndRow, startRow + minRows - 1);
+        const nextEntry = dayEntries[idx + 1];
+        const safeCeiling = Math.max(entry.baseEndRow, nextEntry ? nextEntry.startRow - 1 : totalRows);
+        endRow = Math.min(desiredEndRow, safeCeiling, totalRows);
+      }
+
+      const colStart = subColumn === 2 ? rightCol : leftCol;
+      const colEnd = subColumn === 0 ? rightCol : colStart;
+
+      ws['!merges'].push({ s: { r: startRow, c: colStart }, e: { r: endRow, c: colEnd } });
+
+      const textParts = cellPlacements.map(p => {
+        return p.useShortText
+          ? `${p.activity.asignatura}\n${p.activity.sala || ''}`.trim()
+          : `${p.activity.asignatura}\n${p.activity.grupo || ''}\n${p.activity.sala || ''}`.trim();
+      });
+      const text = textParts.join('\n\n');
+
+      const isConflictPair = subColumn !== 0;
+      const isMergedConflictGroup = cellPlacements.length > 1;
+
+      let excelColor: string;
+      if (isMergedConflictGroup) {
+        excelColor = EXCEL_COLORS.default;
+      } else {
+        const colorKey = cellPlacements[0].activity.color || 'default';
+        excelColor = EXCEL_COLORS[colorKey] || EXCEL_COLORS.default;
+      }
+
+      const borderStyle = (isConflictPair || isMergedConflictGroup)
+        ? { top: DANGER_BORDER, bottom: DANGER_BORDER, left: DANGER_BORDER, right: DANGER_BORDER }
+        : {
+            top: { style: "thin", color: { rgb: "FF94A3B8" } },
+            bottom: { style: "thin", color: { rgb: "FF94A3B8" } },
+            left: { style: "thin", color: { rgb: "FF94A3B8" } },
+            right: { style: "thin", color: { rgb: "FF94A3B8" } }
+          };
+
+      const cellRef = XLSX.utils.encode_cell({ c: colStart, r: startRow });
       ws[cellRef] = { v: text, t: 's' };
-      
-      // Aplicar estilos al bloque fusionado
+
       for (let r = startRow; r <= endRow; r++) {
-        const ref = XLSX.utils.encode_cell({ c: colIndex, r });
-        if (!ws[ref]) ws[ref] = { v: '', t: 's' };
-        
-        ws[ref].s = {
-          fill: { fgColor: { rgb: excelColor } },
-          alignment: { vertical: "center", horizontal: "center", wrapText: true },
-          font: { color: { rgb: "FF1E293B" }, bold: true }, // slate-800
-          border: {
-             top: { style: "thin", color: { rgb: "FF94A3B8" } }, // slate-400
-             bottom: { style: "thin", color: { rgb: "FF94A3B8" } },
-             left: { style: "thin", color: { rgb: "FF94A3B8" } },
-             right: { style: "thin", color: { rgb: "FF94A3B8" } }
-          }
-        };
+        for (let c = colStart; c <= colEnd; c++) {
+          const ref = XLSX.utils.encode_cell({ c, r });
+          if (!ws[ref]) ws[ref] = { v: '', t: 's' };
+          ws[ref].s = {
+            fill: { fgColor: { rgb: excelColor } },
+            alignment: { vertical: "center", horizontal: "center", wrapText: true },
+            font: { color: { rgb: "FF1E293B" }, bold: true },
+            border: borderStyle
+          };
+        }
       }
     });
   });
-  
-  ws['!cols'] = [
-    { wch: 10 }, // Hora
-    { wch: 20 }, // Lunes
-    { wch: 20 }, // Martes
-    { wch: 20 }, // Miércoles
-    { wch: 20 }, // Jueves
-    { wch: 20 }, // Viernes
-    { wch: 20 }, // Sábado
-    { wch: 20 }, // Domingo
-  ];
-  
+
+  ws['!cols'] = Array.from({ length: totalCols }, () => ({ wch: 10 }));
+
   if (!ws['!rows']) ws['!rows'] = [];
-  ws['!rows'][0] = { hpt: 25 }; 
+  ws['!rows'][0] = { hpt: 25 };
   for (let r = 1; r <= totalRows; r++) {
     ws['!rows'][r] = { hpt: 30 };
   }
-  
+
   return ws;
 }
 
@@ -526,13 +590,17 @@ export function generateICSContent(activities: Activity[]): string {
       const safeId = (act.id || 'act').replace(/[^a-zA-Z0-9-]/g, '-');
       const uid = `event-${safeId}-${sch.day}-${eventIndex}@horario-interactivo.local`;
 
-      const description = [
+      const descriptionParts = [
         `Modalidad: ${act.modalidad || 'N.A.'}`,
         `Grupo: ${act.grupo || 'N.A.'}`,
         `Créditos: ${act.creditos || 'N.A.'}`,
         `Profesor: ${act.profesor || 'Sin asignar'}`,
         `Sala: ${act.sala || 'Por definir'}`,
-      ].join(' | ');
+      ];
+      if (sch.isAsync) {
+        descriptionParts.push('Asíncrona: Sí');
+      }
+      const description = descriptionParts.join(' | ');
 
       rawLines.push(
         'BEGIN:VEVENT',
@@ -726,7 +794,7 @@ export async function exportToPDF(activities: Activity[], filename = 'horario_in
       act.grupo,
       act.creditos || '-',
       act.profesor || '-',
-      act.horarioTexto || '-',
+      formatWeeklySchedulesWithAsync(act.schedules) || '-',
       act.sala || '-'
     ]);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, DAYS, HOURS, DayOfWeek } from '../types';
+import { Activity, DAYS, HOURS, DayOfWeek, ActivitySchedule } from '../types';
 import { formatTime } from '../utils/time';
 import { DayColumn } from './DayColumn';
 
@@ -14,6 +14,8 @@ interface CalendarProps {
   onColorChange: (asignatura: string, colorId: string) => void;
   useColorfulMode: boolean;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  markAsyncEnabled: boolean;
+  onToggleAsync: (activityId: string, schedule: ActivitySchedule) => void;
 }
 
 export function Calendar({
@@ -27,6 +29,8 @@ export function Calendar({
   onColorChange,
   useColorfulMode,
   onScroll,
+  markAsyncEnabled,
+  onToggleAsync,
 }: CalendarProps) {
   const [activeCell, setActiveCell] = React.useState<{ day: DayOfWeek; hour: number } | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -142,6 +146,8 @@ export function Calendar({
                   onCellToggle={handleCellToggle}
                   onCloseCell={() => setActiveCell(null)}
                   dropdownRef={dropdownRef}
+                  markAsyncEnabled={markAsyncEnabled}
+                  onToggleAsync={onToggleAsync}
                 />
               ))}
             </div>

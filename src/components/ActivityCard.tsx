@@ -5,7 +5,7 @@
 import { Activity, ActivitySchedule } from '../types';
 import { cn } from '../lib/utils';
 import { formatTime } from '../utils/time';
-import { X } from 'lucide-react';
+import { X, Wifi } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { getPendingPrerequisites, getMateriaNotas } from '../utils/curriculum';
@@ -21,9 +21,11 @@ interface ActivityCardProps {
   colorOverrides: Record<string, string>;
   onColorChange: (asignatura: string, colorId: string) => void;
   useColorfulMode: boolean;
+  markAsyncEnabled: boolean;
+  onToggleAsync: (activityId: string, schedule: ActivitySchedule) => void;
 }
 
-export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas, showAntecedentes = true, colorOverrides, onColorChange, useColorfulMode }: ActivityCardProps) {
+export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas, showAntecedentes = true, colorOverrides, onColorChange, useColorfulMode, markAsyncEnabled, onToggleAsync }: ActivityCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number; openUpward: boolean } | null>(null);
@@ -31,8 +33,16 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; bottom: number; left: number; openUpward: boolean } | null>(null);
+  
+  const [showAsyncToast, setShowAsyncToast] = useState(false);
+  const [asyncToastValue, setAsyncToastValue] = useState(false);
+  const asyncToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const asyncTriggerRef = useRef<HTMLButtonElement>(null);
+  const [asyncToastPosition, setAsyncToastPosition] = useState<{ top: number; left: number; openUpward: boolean } | null>(null);
 
   const isTouchRef = useRef(false);
+
+  useEffect(() => () => { if (asyncToastTimeoutRef.current) clearTimeout(asyncToastTimeoutRef.current); }, []);
 
   useEffect(() => {
     if (showTooltip && cardRef.current) {
@@ -170,6 +180,44 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
         title="Cambiar color de materia"
       />
 
+      {/* Async mark trigger */}
+      {markAsyncEnabled && (
+        <button
+          ref={asyncTriggerRef}
+          onClick={(e) => {
+            e.stopPropagation();
+            const nextAsyncValue = !schedule.isAsync;
+            setAsyncToastValue(nextAsyncValue);
+            onToggleAsync(activity.id, schedule);
+            
+            if (asyncToastTimeoutRef.current) clearTimeout(asyncToastTimeoutRef.current);
+            
+            if (asyncTriggerRef.current) {
+              const rect = asyncTriggerRef.current.getBoundingClientRect();
+              const popoverHeight = 32;
+              const openUpward = (window.innerHeight - rect.bottom) < popoverHeight || rect.top > window.innerHeight - 150;
+              let top = openUpward ? rect.top - popoverHeight - 4 : rect.bottom + 4;
+              let left = rect.left;
+              const popoverWidth = 100;
+              if (left + popoverWidth > window.innerWidth) {
+                left = Math.max(8, window.innerWidth - popoverWidth - 8);
+              }
+              setAsyncToastPosition({ top, left, openUpward });
+            }
+            
+            setShowAsyncToast(true);
+            asyncToastTimeoutRef.current = setTimeout(() => setShowAsyncToast(false), 900);
+          }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+          className="absolute bottom-1 left-[22px] w-3.5 h-3.5 rounded-full hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] flex items-center justify-center shadow-xs"
+          style={{ backgroundColor: schedule.isAsync ? 'var(--color-primary)' : 'var(--text-muted)' }}
+          title={schedule.isAsync ? "Quitar marca de asíncrona" : "Marcar como asíncrona"}
+        >
+          <Wifi className="w-2 h-2 text-white" strokeWidth={3} />
+        </button>
+      )}
+
       {/* Color Picker Popover */}
       {createPortal(
         <AnimatePresence>
@@ -208,6 +256,24 @@ export function ActivityCard({ activity, schedule, onRemove, materiasCompletadas
               >
                 <X className="w-2.5 h-2.5" />
               </button>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Async Toast */}
+      {createPortal(
+        <AnimatePresence>
+          {showAsyncToast && asyncToastPosition && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed z-[200] bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-lg shadow-xl px-2.5 py-1.5 text-xs font-medium text-[var(--text-main)] pointer-events-none whitespace-nowrap"
+              style={{ top: asyncToastPosition.top, left: asyncToastPosition.left }}
+            >
+              Asíncrono: {asyncToastValue ? 'ON' : 'OFF'}
             </motion.div>
           )}
         </AnimatePresence>,

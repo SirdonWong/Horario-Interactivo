@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Activity, DayOfWeek, HOURS } from '../types';
-import { checkOverlap, hasConflict, formatTime, formatWeeklySchedules } from '../utils/time';
+import { Activity, DayOfWeek, HOURS, ActivitySchedule } from '../types';
+import { checkOverlap, activitiesConflict, formatTime, formatWeeklySchedules, groupOverlappingActivities, getGroupTimeSpan } from '../utils/time';
 import { ActivityCard } from './ActivityCard';
 import { cn } from '../lib/utils';
 import { getPendingPrerequisites, resolveMateriaId } from '../utils/curriculum';
@@ -24,6 +24,8 @@ interface DayColumnProps {
   onCellToggle: (day: DayOfWeek, hour: number, e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => void;
   onCloseCell: () => void;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
+  markAsyncEnabled: boolean;
+  onToggleAsync: (activityId: string, schedule: ActivitySchedule) => void;
 }
 
 export function DayColumn({
@@ -43,6 +45,8 @@ export function DayColumn({
   onCellToggle,
   onCloseCell,
   dropdownRef,
+  markAsyncEnabled,
+  onToggleAsync,
 }: DayColumnProps) {
 
   const selectedAsignaturas = useMemo(() => {
@@ -154,8 +158,7 @@ export function DayColumn({
                         const actKey = resolveMateriaId(act.asignatura) || act.asignatura.trim().toLowerCase();
                         const isApproved = showAntecedentes && materiasCompletadas.has(resolveMateriaId(act.asignatura) || "");
                         const isSameSubjectSelected = selectedAsignaturas.has(actKey);
-                        const selectedSchedules = selectedActivities.flatMap(sa => sa.schedules);
-                        const isConflict = !isSameSubjectSelected && hasConflict(act.schedules, selectedSchedules);
+                        const isConflict = !isSameSubjectSelected && selectedActivities.some(sel => activitiesConflict(act, sel));
                         const antecedentesPendientes = getPendingPrerequisites(act.asignatura, act.antecedentes, materiasCompletadas);
                         const weeklyScheduleText = formatWeeklySchedules(act.schedules);
 
@@ -208,35 +211,81 @@ export function DayColumn({
           );
         })}
 
-        {/* Selected Activities rendered absolutely */}
-        {activitiesForThisDay.map(({ activity, schedule }) => {
+        {/* Selected Activities rendered absolutely, agrupadas por solape */}
+        {groupOverlappingActivities(activitiesForThisDay).map((group) => {
           const calendarStartOffset = 7 * 60; // 07:00 AM
-          const topMinutes = schedule.timeRange.start - calendarStartOffset;
-          const durationMinutes = schedule.timeRange.end - schedule.timeRange.start;
-
           const totalCalendarMinutes = 15 * 60; // 15 horas (07:00 a 21:00)
+
+          if (group.length === 1) {
+            const { activity, schedule } = group[0];
+            const topMinutes = schedule.timeRange.start - calendarStartOffset;
+            const durationMinutes = schedule.timeRange.end - schedule.timeRange.start;
+            const topPercent = (topMinutes / totalCalendarMinutes) * 100;
+            const heightPercent = (durationMinutes / totalCalendarMinutes) * 100;
+
+            return (
+              <div
+                key={activity.id}
+                className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[60] px-1"
+                style={{
+                  top: `${topPercent}%`,
+                  height: `${heightPercent}%`,
+                }}
+              >
+                <ActivityCard
+                  activity={activity}
+                  schedule={schedule}
+                  onRemove={onRemoveActivity}
+                  materiasCompletadas={materiasCompletadas}
+                  showAntecedentes={showAntecedentes}
+                  colorOverrides={colorOverrides}
+                  onColorChange={onColorChange}
+                  useColorfulMode={useColorfulMode}
+                  markAsyncEnabled={markAsyncEnabled}
+                  onToggleAsync={onToggleAsync}
+                />
+              </div>
+            );
+          }
+
+          // Grupo con 2 o más actividades solapadas: bloque combinado
+          const span = getGroupTimeSpan(group);
+          const topMinutes = span.start - calendarStartOffset;
+          const durationMinutes = span.end - span.start;
           const topPercent = (topMinutes / totalCalendarMinutes) * 100;
           const heightPercent = (durationMinutes / totalCalendarMinutes) * 100;
+          const groupKey = group.map(g => `${g.activity.id}::${g.schedule.day}::${g.schedule.timeRange.start}::${g.schedule.timeRange.end}`).join('|');
 
           return (
             <div
-              key={activity.id}
-              className="absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[60] px-1"
+              key={groupKey}
+              className="overlap-group-wrapper absolute left-0 right-0 z-10 hover:z-[60] focus-within:z-[60] has-[.active-card]:z-[60] px-1"
               style={{
                 top: `${topPercent}%`,
                 height: `${heightPercent}%`,
               }}
             >
-              <ActivityCard
-                activity={activity}
-                schedule={schedule}
-                onRemove={onRemoveActivity}
-                materiasCompletadas={materiasCompletadas}
-                showAntecedentes={showAntecedentes}
-                colorOverrides={colorOverrides}
-                onColorChange={onColorChange}
-                useColorfulMode={useColorfulMode}
-              />
+              <div className="flex flex-col h-full w-full gap-0.5 border-2 border-[var(--color-danger)] rounded-md overflow-y-auto overflow-x-hidden">
+                {group.map(({ activity, schedule }) => (
+                  <div
+                    key={`${activity.id}::${schedule.day}::${schedule.timeRange.start}::${schedule.timeRange.end}`}
+                    className="flex-1 min-h-[58px]"
+                  >
+                    <ActivityCard
+                      activity={activity}
+                      schedule={schedule}
+                      onRemove={onRemoveActivity}
+                      materiasCompletadas={materiasCompletadas}
+                      showAntecedentes={showAntecedentes}
+                      colorOverrides={colorOverrides}
+                      onColorChange={onColorChange}
+                      useColorfulMode={useColorfulMode}
+                      markAsyncEnabled={markAsyncEnabled}
+                      onToggleAsync={onToggleAsync}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}

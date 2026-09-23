@@ -257,3 +257,16 @@
   display: none !important;
 }
 
+/* Durante exportación, el bloque de grupo combinado crece a su alto natural
+   en vez de quedarse forzado al porcentaje geométrico del calendario, para
+   garantizar que ninguna actividad del grupo quede recortada en la imagen. */
+.exporting-mode .overlap-group-wrapper {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.exporting-mode .overlap-group-wrapper > div {
+  height: auto !important;
+}
+
+
