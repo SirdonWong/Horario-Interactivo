@@ -206,26 +206,52 @@ export function generateMatrixSheet(activities: Activity[], XLSX: any) {
 
     const placements = computeMatrixCellPlacements(itemsForDay);
 
-    // Reagrupar placements que comparten exactamente el mismo subColumn+span.
-    // Esto SOLO ocurre para grupos de 3+ (donde varios placements con
-    // subColumn 0 comparten el mismo rango) — deben escribirse como UNA
-    // sola celda fusionada con todos los textos, nunca como merges
-    // independientes que se pisarían entre sí.
-    const cellGroups = new Map<string, typeof placements>();
+    const cellGroupsMap = new Map<string, typeof placements>();
     for (const p of placements) {
       const key = `${p.subColumn}::${p.spanStart}::${p.spanEnd}`;
-      if (!cellGroups.has(key)) cellGroups.set(key, []);
-      cellGroups.get(key)!.push(p);
+      if (!cellGroupsMap.has(key)) cellGroupsMap.set(key, []);
+      cellGroupsMap.get(key)!.push(p);
     }
 
-    for (const cellPlacements of cellGroups.values()) {
-      const { subColumn, spanStart, spanEnd } = cellPlacements[0];
+    interface DayCellEntry {
+      subColumn: 0 | 1 | 2;
+      cellPlacements: typeof placements;
+      startRow: number;
+      baseEndRow: number;
+    }
 
+    const dayEntries: DayCellEntry[] = [];
+    for (const cellPlacements of cellGroupsMap.values()) {
+      const { subColumn, spanStart, spanEnd } = cellPlacements[0];
       if (spanStart < startHour * 60 || spanEnd > endHour * 60) continue;
 
       const startRow = Math.floor((spanStart - startHour * 60) / intervalMins) + 1;
-      const endRow = Math.ceil((spanEnd - startHour * 60) / intervalMins);
-      if (startRow > endRow) continue;
+      const baseEndRow = Math.ceil((spanEnd - startHour * 60) / intervalMins);
+      if (startRow > baseEndRow) continue;
+
+      dayEntries.push({ subColumn, cellPlacements, startRow, baseEndRow });
+    }
+
+    dayEntries.sort((a, b) => a.startRow - b.startRow);
+
+    dayEntries.forEach((entry, idx) => {
+      const { subColumn, cellPlacements, startRow } = entry;
+      let endRow = entry.baseEndRow;
+
+      // Piso mínimo de filas SOLO para grupos de 3+ (cellPlacements.length > 1,
+      // que únicamente ocurre cuando computeMatrixCellPlacements devolvió
+      // varios placements con subColumn 0 compartiendo el mismo span): al
+      // menos una fila de 30 min por actividad del grupo. Nunca invade la
+      // siguiente celda ocupada de este mismo día (dayEntries ya está
+      // ordenado por startRow), y nunca reduce el tamaño natural que ya tenía
+      // el grupo antes de esta corrección.
+      if (cellPlacements.length > 1) {
+        const minRows = cellPlacements.length * 2;
+        const desiredEndRow = Math.max(entry.baseEndRow, startRow + minRows - 1);
+        const nextEntry = dayEntries[idx + 1];
+        const safeCeiling = Math.max(entry.baseEndRow, nextEntry ? nextEntry.startRow - 1 : totalRows);
+        endRow = Math.min(desiredEndRow, safeCeiling, totalRows);
+      }
 
       const colStart = subColumn === 2 ? rightCol : leftCol;
       const colEnd = subColumn === 0 ? rightCol : colStart;
@@ -274,7 +300,7 @@ export function generateMatrixSheet(activities: Activity[], XLSX: any) {
           };
         }
       }
-    }
+    });
   });
 
   ws['!cols'] = Array.from({ length: totalCols }, () => ({ wch: 10 }));
